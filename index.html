@@ -1,0 +1,2047 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>고창농악 진형 기록기</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans KR',sans-serif;background:#1a1a2e;color:#e0e0e0;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+.top-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:#16213e;border-bottom:1px solid #0f3460;flex-shrink:0;gap:12px;flex-wrap:wrap}
+.top-bar h1{font-size:16px;font-weight:500;color:#e94560;white-space:nowrap}
+.controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.controls label{font-size:12px;color:#a0a0b0}
+.controls input[type=number]{width:50px;padding:4px 6px;background:#0f3460;border:1px solid #1a4080;color:#fff;border-radius:4px;font-size:12px;text-align:center}
+.controls input[type=range]{width:80px;accent-color:#e94560}
+.btn{padding:5px 12px;border:1px solid #1a4080;background:#0f3460;color:#e0e0e0;border-radius:4px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+.btn:hover{background:#1a4080;border-color:#e94560}
+.btn.active{background:#e94560;border-color:#e94560;color:#fff}
+.btn.export{background:#1d6e3f;border-color:#28a060}
+.btn.export:hover{background:#28a060}
+.btn.danger{border-color:#a03030}
+.btn.danger:hover{background:#a03030}
+.main-area{display:flex;flex:1;overflow:hidden}
+.stage-container{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;padding:8px}
+.stage-label{font-size:13px;color:#e94560;letter-spacing:2px;margin:2px 0}
+.stage-wrapper{position:relative;flex:1;width:100%;max-width:1100px;display:flex;align-items:center;justify-content:center}
+canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block}
+.sidebar{width:260px;background:#16213e;border-left:1px solid #0f3460;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.sidebar h2{font-size:13px;padding:10px 12px;border-bottom:1px solid #0f3460;color:#e94560;font-weight:500}
+.keyframes-list{flex:1;overflow-y:auto;padding:6px}
+.keyframe-item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:4px;cursor:pointer;font-size:12px;border:1px solid transparent;margin-bottom:4px;transition:all .15s}
+.keyframe-item:hover{background:#0f3460}
+.keyframe-item.active{border-color:#e94560;background:#1a1a40}
+.keyframe-item .num{color:#e94560;font-weight:700;min-width:24px}
+.keyframe-item .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.keyframe-item .del{color:#666;cursor:pointer;font-size:14px;padding:0 4px}
+.keyframe-item .del:hover{color:#e94560}
+.sidebar-bottom{padding:8px;border-top:1px solid #0f3460;display:flex;flex-direction:column;gap:6px}
+.coord-output{background:#0a0a1a;border:1px solid #0f3460;border-radius:4px;padding:8px;font-family:monospace;font-size:10px;max-height:120px;overflow-y:auto;white-space:pre;color:#80e0a0;line-height:1.4}
+.help-text{font-size:11px;color:#666;line-height:1.5;padding:8px 12px}
+.instrument-legend{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-bottom:1px solid #0f3460}
+.legend-item{display:flex;align-items:center;gap:3px;font-size:10px;color:#a0a0b0}
+.legend-dot{width:10px;height:10px;border-radius:50%}
+.mode-indicator{font-size:11px;padding:3px 8px;border-radius:10px;background:#e94560;color:#fff;font-weight:500}
+.playback-controls{display:flex;align-items:center;gap:6px}
+.speed-display{font-size:11px;color:#a0a0b0;min-width:30px}
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#28a060;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
+#toast.show{opacity:1}
+@keyframes pulse{0%,100%{background:#c0392b}50%{background:#e94560}}
+.btn.recording{animation:pulse 1s infinite;border-color:#e94560;color:#fff}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h1>고창농악 진형 기록기</h1>
+  <div class="controls">
+    <label>노드 수</label>
+    <input type="number" id="nodeCount" value="23" min="1" max="50">
+    <label>간격</label>
+    <input type="range" id="spacing" min="15" max="150" value="35">
+    <span id="spacingVal" style="font-size:11px;min-width:28px">35</span>
+    <div style="width:1px;height:20px;background:#0f3460"></div>
+    <button class="btn" id="btnSnapCircle" title="체인을 완벽한 원으로 스냅">⊙ 원진</button>
+    <button class="btn" id="btnDoubleCircle" title="안원+바깥원 겹원진 생성">◎ 겹원진</button>
+    <input type="number" id="innerCount" value="5" min="1" max="20" style="width:36px;padding:4px;background:#0f3460;border:1px solid #1a4080;color:#fff;border-radius:4px;font-size:11px;text-align:center" title="안원 인원수">
+    <button class="btn" id="btnRotate180" title="모든 체인 노드 방향 180° 회전">↻ 180°</button>
+    <button class="btn" id="btnNanjin" title="난진: 상쇠 주위로 모이되 같은 악기끼리 인접하지 않게 분산">⁂ 난진</button>
+    <button class="btn" id="btnToggleSit" title="모든 치배를 앉히거나 일으키기 (shift+클릭으로 개별 토글 가능)">⌄ 앉음</button>
+    <button class="btn" id="btnShibiljajin" title="11자진: 원진에서 접기 (O→U). 상쇠 줄이 관객 시점 왼쪽, 두 줄이 마주봄">‖ 11자진</button>
+    <div style="width:1px;height:20px;background:#0f3460"></div>
+    <span id="selCount" style="font-size:11px;color:#8b95c5;padding:0 6px" title="선택된 노드 수. 빈 공간 드래그로 선택, Ctrl+드래그로 추가/토글, 빈 공간 클릭으로 전체 해제.">선택: 0</span>
+    <button class="btn" id="btnClearSel" title="선택 전체 해제">선택 해제</button>
+    <div style="width:1px;height:20px;background:#0f3460"></div>
+    <label style="font-size:11px" title="장단당 BPM">🎵 BPM</label>
+    <input type="range" id="bpmSlider" min="30" max="320" value="120" style="width:110px">
+    <input type="number" id="bpmValue" value="120" min="30" max="320" style="width:52px;padding:4px;background:#0f3460;border:1px solid #1a4080;color:#fff;border-radius:4px;font-size:11px;text-align:center">
+    <select id="gasrakSelect" title="현재 BPM에 어울리는 가락 (BPM 범위가 정의된 가락만 필터링됨)" style="padding:4px 8px;background:#0f3460;border:1px solid #1a4080;color:#fff;border-radius:4px;font-size:12px;max-width:220px">
+      <option value="">— 가락 선택 —</option>
+    </select>
+    <div style="width:1px;height:20px;background:#0f3460"></div>
+    <button class="btn" id="btnSave">💾 키프레임 저장</button>
+    <button class="btn" id="btnRecord">⏺ 녹화</button>
+    <label style="font-size:11px">간격</label>
+    <input type="number" id="recordInterval" value="500" min="100" max="3000" step="100" style="width:55px">
+    <span style="font-size:11px;color:#a0a0b0">ms</span>
+    <button class="btn" id="btnUndo">↩ 실행취소</button>
+    <button class="btn" id="btnClear" >🗑 초기화</button>
+  </div>
+</div>
+
+<div class="main-area">
+  <div class="stage-container">
+    <div class="stage-label">▲ 무대 뒤에서</div>
+    <div class="stage-wrapper">
+      <canvas id="stage"></canvas>
+    </div>
+    <div class="stage-label">▼ 청중</div>
+  </div>
+
+  <div class="sidebar">
+    <h2>키프레임 목록</h2>
+    <div class="instrument-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div>꽹과리</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div>징</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#3498db"></div>장구</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2ecc71"></div>북</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e67e22"></div>소고</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f1c40f"></div>잡색</div>
+    </div>
+    <div class="keyframes-list" id="keyframesList"></div>
+    <div class="sidebar-bottom">
+      <div class="playback-controls">
+        <button class="btn" id="btnPlayback">▶ 재생</button>
+        <button class="btn" id="btnPlayAccel" title="점점 빨라지는 가속 재생">▶▶ 가속</button>
+        <button class="btn" id="btnPrev">◀</button>
+        <button class="btn" id="btnNext">▶</button>
+        <label style="font-size:11px">속도</label>
+        <input type="range" id="playSpeed" min="200" max="2000" value="800" style="width:60px">
+        <span class="speed-display" id="speedVal">0.8s</span>
+      </div>
+      <button class="btn export" id="btnExport" style="width:100%">📋 전체 좌표 복사</button>
+      <button class="btn export" id="btnExportJSON" style="width:100%">📥 JSON 내보내기</button>
+      <div class="coord-output" id="coordOutput">키프레임을 선택하면 좌표가 표시됩니다.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+const container = canvas.parentElement;
+
+const INSTRUMENTS = [
+  {name:'상쇠', color:'#e94560'},
+  {name:'부쇠', color:'#e94560'},
+  {name:'징1', color:'#9b59b6'},
+  {name:'징2', color:'#9b59b6'},
+  {name:'장구1', color:'#3498db'},
+  {name:'장구2', color:'#3498db'},
+  {name:'장구3', color:'#3498db'},
+  {name:'장구4', color:'#3498db'},
+  {name:'장구5', color:'#3498db'},
+  {name:'장구6', color:'#3498db'},
+  {name:'북1', color:'#2ecc71'},
+  {name:'북2', color:'#2ecc71'},
+  {name:'북3', color:'#2ecc71'},
+  {name:'북4', color:'#2ecc71'},
+  {name:'소고1', color:'#e67e22'},
+  {name:'소고2', color:'#e67e22'},
+  {name:'소고3', color:'#e67e22'},
+  {name:'소고4', color:'#e67e22'},
+  {name:'소고5', color:'#e67e22'},
+  {name:'소고6', color:'#e67e22'},
+  {name:'잡색1', color:'#f1c40f'},
+  {name:'잡색2', color:'#f1c40f'},
+  {name:'잡색3', color:'#f1c40f'},
+];
+
+let nodeCount = 23;
+let spacing = 35;
+let nodes = [];
+let path = [];
+let keyframes = [];
+let activeKeyframe = -1;
+let dragNodeIdx = -1;
+let isPlaying = false;
+let playTimer = null;
+let undoStack = [];
+let stageW, stageH;
+
+function resizeCanvas() {
+  const rect = container.getBoundingClientRect();
+  const maxW = rect.width - 16;
+  const maxH = rect.height - 8;
+  const aspect = 16/10;
+  let w = maxW;
+  let h = w / aspect;
+  if (h > maxH) { h = maxH; w = h * aspect; }
+  canvas.width = Math.floor(w);
+  canvas.height = Math.floor(h);
+  stageW = canvas.width;
+  stageH = canvas.height;
+  draw();
+}
+
+function initNodes() {
+  nodes = [];
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+
+  if (nodeCount === 23) {
+    // 원진 프리셋 (고창농악 1마당 원진_1)
+    // 상쇠(1번)는 원 중앙에 분리 상태로 배치
+    nodes.push({
+      x: cx,
+      y: cy,
+      heading: Math.PI / 2, // 청중 방향
+      detached: true,
+      sitting: false,
+      selected: false,
+    });
+    // 나머지 22명이 원을 이룸 (반시계 방향으로 진행, "왼쪽으로 돈다")
+    const idealR = Math.min(stageW, stageH) * 0.36;
+    const minR = (nodeCount - 1) * 32 / (2 * Math.PI); // MIN_NODE_GAP 적용
+    const radius = Math.max(idealR, minR);
+    // 시작 각도: 12시 방향에서 약간 오른쪽 (2번이 무대 뒤쪽 약간 우측)
+    const startAngle = -Math.PI / 2 + 0.35;
+    for (let i = 1; i < nodeCount; i++) {
+      // 시계방향 배치 (번호 순서대로 오른쪽으로 내려가며 돌아옴)
+      const angle = startAngle + (i - 1) * (2 * Math.PI / (nodeCount - 1));
+      nodes.push({
+        x: cx + radius * Math.cos(angle),
+        y: cy + radius * Math.sin(angle),
+        // 반시계 방향(왼쪽으로 돈다)으로 진행하는 접선 방향
+        heading: angle - Math.PI / 2,
+        detached: false,
+        sitting: false,
+        selected: false,
+      });
+    }
+  } else {
+    for (let i = 0; i < nodeCount; i++) {
+      nodes.push({
+        x: cx - (nodeCount/2 - i) * 25,
+        y: cy,
+        heading: 0,
+        detached: false,
+        sitting: false,
+        selected: false,
+      });
+    }
+  }
+}
+
+// 노드 수만 변경하되 기존 노드 위치는 유지
+function resizeNodeCount(newCount) {
+  if (newCount > nodes.length) {
+    // 추가: 마지막 노드 뒤에 이어서 배치
+    const last = nodes[nodes.length - 1] || {x: stageW/2, y: stageH/2, heading: 0};
+    const prev = nodes[nodes.length - 2] || {x: last.x - 25, y: last.y, heading: 0};
+    let dx = last.x - prev.x;
+    let dy = last.y - prev.y;
+    const mag = Math.sqrt(dx*dx + dy*dy) || 1;
+    dx = dx / mag * 25;
+    dy = dy / mag * 25;
+    for (let i = nodes.length; i < newCount; i++) {
+      const base = nodes[nodes.length - 1];
+      nodes.push({
+        x: base.x + dx,
+        y: base.y + dy,
+        heading: base.heading,
+        detached: false,
+        sitting: false,
+        selected: false,
+      });
+    }
+  } else if (newCount < nodes.length) {
+    nodes = nodes.slice(0, newCount);
+  }
+  nodeCount = newCount;
+}
+
+function getInstrument(idx) {
+  if (idx < INSTRUMENTS.length) return INSTRUMENTS[idx];
+  return {name: `${idx+1}`, color: '#888'};
+}
+
+function drawGrid() {
+  // 사각 격자
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+  ctx.lineWidth = 1;
+  const gs = 40;
+  for (let x = gs; x < stageW; x += gs) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, stageH); ctx.stroke();
+  }
+  for (let y = gs; y < stageH; y += gs) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(stageW, y); ctx.stroke();
+  }
+
+  // 중심점
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+  const maxR = Math.sqrt(cx*cx + cy*cy);
+
+  // 동심원 (원형 배치 가이드)
+  ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+  ctx.lineWidth = 1;
+  for (let r = gs; r < maxR; r += gs) {
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 방사선 (30도 간격)
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
+    ctx.stroke();
+  }
+
+  // 중심 십자선 (더 진하게)
+  ctx.strokeStyle = 'rgba(232,69,96,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, stageH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(stageW, cy); ctx.stroke();
+
+  // 중심점 마커
+  ctx.fillStyle = 'rgba(232,69,96,0.4)';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPath() {
+  if (path.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+  for (let i = 1; i < path.length; i++) {
+    ctx.lineTo(path[i].x, path[i].y);
+  }
+  ctx.strokeStyle = 'rgba(232,69,96,0.3)';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawConnectionLines() {
+  const chainNodes = nodes.filter(n => !n.detached);
+  if (chainNodes.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(chainNodes[0].x, chainNodes[0].y);
+  for (let i = 1; i < chainNodes.length; i++) {
+    ctx.lineTo(chainNodes[i].x, chainNodes[i].y);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+function drawNodes() {
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    const inst = getInstrument(i);
+    const baseR = i === 0 ? 16 : 13;
+    const r = n.sitting ? Math.round(baseR * 0.72) : baseR;
+
+    // 앉음 표시: 바닥 그림자
+    if (n.sitting) {
+      ctx.beginPath();
+      ctx.ellipse(n.x, n.y + r + 3, r + 2, 2.5, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fill();
+    }
+
+    // 방향 삼각형 (앉으면 안 그림)
+    if (!n.sitting) {
+      const h = n.heading;
+      const tipX = n.x + Math.cos(h) * (r + 8);
+      const tipY = n.y + Math.sin(h) * (r + 8);
+      const baseX = n.x + Math.cos(h) * (r - 1);
+      const baseY = n.y + Math.sin(h) * (r - 1);
+      const perpX = -Math.sin(h);
+      const perpY = Math.cos(h);
+      const tw = 5;
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(baseX + perpX * tw, baseY + perpY * tw);
+      ctx.lineTo(baseX - perpX * tw, baseY - perpY * tw);
+      ctx.closePath();
+      ctx.fillStyle = inst.color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // 이탈 노드 외곽 점선 링
+    if (n.detached) {
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r + 5, 0, Math.PI * 2);
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // 선택된 노드 강조 링 (노란색 실선, detached 링보다 더 바깥)
+    if (n.selected) {
+      const ringR = r + (n.detached ? 9 : 5);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, ringR, 0, Math.PI * 2);
+      ctx.strokeStyle = '#ffd60a';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // 노드 원 (앉으면 반투명한 색)
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    if (n.sitting) {
+      // hex를 rgba로 낮춤
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = inst.color;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = inst.color;
+      ctx.fill();
+    }
+    ctx.strokeStyle = n.detached ? '#fff' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = n.detached ? 2 : 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = n.sitting ? 'rgba(255,255,255,0.75)' : '#fff';
+    const fontSize = (i === 0 ? 11 : 10) * (n.sitting ? 0.85 : 1);
+    ctx.font = `bold ${Math.round(fontSize)}px 'Noto Sans KR', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(i + 1, n.x, n.y);
+  }
+}
+
+let dragMode = null;
+let dragChainOrder = [];
+
+// 선택 및 lasso 관련 상태
+let selectionRect = null;   // {startX, startY, endX, endY} — 드래그 중 사각형
+let lassoAddMode = false;   // true면 기존 선택에 추가/토글, false면 새 선택
+
+function drawCrosshair() {
+  if (dragMode !== 'chain' || path.length === 0) return;
+  const last = path[path.length - 1];
+  ctx.strokeStyle = 'rgba(232,69,96,0.5)';
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(last.x, 0); ctx.lineTo(last.x, stageH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, last.y); ctx.lineTo(stageW, last.y); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, stageW, stageH);
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, stageW, stageH);
+  drawGrid();
+  drawPath();
+  drawConnectionLines();
+  drawNodes();
+  drawCrosshair();
+  drawSelectionRect();
+  updateSelectionCount();
+}
+
+function drawSelectionRect() {
+  if (!selectionRect) return;
+  const r = selectionRect;
+  const x = Math.min(r.startX, r.endX);
+  const y = Math.min(r.startY, r.endY);
+  const w = Math.abs(r.endX - r.startX);
+  const h = Math.abs(r.endY - r.startY);
+  ctx.fillStyle = 'rgba(255, 214, 10, 0.10)';
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = 'rgba(255, 214, 10, 0.8)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([5, 4]);
+  ctx.strokeRect(x, y, w, h);
+  ctx.setLineDash([]);
+}
+
+function getPathLength(pts) {
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i].x - pts[i-1].x;
+    const dy = pts[i].y - pts[i-1].y;
+    len += Math.sqrt(dx*dx + dy*dy);
+  }
+  return len;
+}
+
+function getPointAtDistance(pts, dist) {
+  if (pts.length === 0) return null;
+  if (dist <= 0) return {...pts[pts.length - 1]};
+  let accumulated = 0;
+  for (let i = pts.length - 1; i > 0; i--) {
+    const dx = pts[i].x - pts[i-1].x;
+    const dy = pts[i].y - pts[i-1].y;
+    const segLen = Math.sqrt(dx*dx + dy*dy);
+    if (accumulated + segLen >= dist) {
+      const t = (dist - accumulated) / segLen;
+      return {
+        x: pts[i].x - dx * t,
+        y: pts[i].y - dy * t,
+      };
+    }
+    accumulated += segLen;
+  }
+  return {...pts[0]};
+}
+
+function updateNodesFromPath() {
+  if (path.length === 0 || dragChainOrder.length === 0) return;
+  for (let i = 0; i < dragChainOrder.length; i++) {
+    const nodeIdx = dragChainOrder[i];
+    const pt = getPointAtDistance(path, i * spacing);
+    if (pt) {
+      const oldX = nodes[nodeIdx].x;
+      const oldY = nodes[nodeIdx].y;
+      const dx = pt.x - oldX;
+      const dy = pt.y - oldY;
+      if (dx*dx + dy*dy > 0.5) {
+        nodes[nodeIdx].heading = Math.atan2(dy, dx);
+      }
+      nodes[nodeIdx].x = pt.x;
+      nodes[nodeIdx].y = pt.y;
+    }
+  }
+}
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * (canvas.width / rect.width),
+    y: (e.clientY - rect.top) * (canvas.height / rect.height),
+  };
+}
+
+function findNodeAt(pos) {
+  for (let i = 0; i < nodes.length; i++) {
+    const dx = nodes[i].x - pos.x;
+    const dy = nodes[i].y - pos.y;
+    if (Math.sqrt(dx*dx + dy*dy) < 18) return i;
+  }
+  return -1;
+}
+
+let lastClickTime = 0;
+let lastClickNodeIdx = -1;
+
+function getChainIndices(excludeIdx) {
+  const result = [];
+  for (let i = 0; i < nodes.length; i++) {
+    if (nodes[i].detached) continue;
+    if (excludeIdx !== undefined && i === excludeIdx) continue;
+    result.push(i);
+  }
+  return result;
+}
+
+function tryReattach(nodeIdx) {
+  const n = nodes[nodeIdx];
+  const chain = getChainIndices(nodeIdx);
+  if (chain.length === 0) return false;
+  const head = nodes[chain[0]];
+  const tail = nodes[chain[chain.length - 1]];
+  const dh = Math.hypot(n.x - head.x, n.y - head.y);
+  const dt = Math.hypot(n.x - tail.x, n.y - tail.y);
+  const threshold = spacing * 1.8;
+  if (dh < threshold || dt < threshold) {
+    n.detached = false;
+    return true;
+  }
+  return false;
+}
+
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+canvas.addEventListener('mousedown', (e) => {
+  const pos = getMousePos(e);
+
+  // 우클릭: 해당 노드를 제자리 회전
+  if (e.button === 2) {
+    const idx = findNodeAt(pos);
+    if (idx >= 0) {
+      saveUndo();
+      dragMode = 'rotate';
+      dragNodeIdx = idx;
+      canvas.style.cursor = 'grabbing';
+      // 초기 방향 즉시 설정
+      const dx = pos.x - nodes[idx].x;
+      const dy = pos.y - nodes[idx].y;
+      if (dx*dx + dy*dy > 4) nodes[idx].heading = Math.atan2(dy, dx);
+      draw();
+    }
+    return;
+  }
+
+  // shift+클릭: 해당 노드의 앉음/일어남 토글
+  if (e.shiftKey) {
+    const idx = findNodeAt(pos);
+    if (idx >= 0) {
+      saveUndo();
+      nodes[idx].sitting = !nodes[idx].sitting;
+      draw();
+      showToast(nodes[idx].sitting ? `${idx + 1}번 앉음` : `${idx + 1}번 일어섬`);
+    }
+    return;
+  }
+
+  const now = Date.now();
+  const hoveredIdx = findNodeAt(pos);
+
+  // 더블클릭 감지 → 이탈 토글 + 개별 드래그
+  if (hoveredIdx >= 0 && hoveredIdx === lastClickNodeIdx && now - lastClickTime < 350) {
+    saveUndo();
+    nodes[hoveredIdx].detached = !nodes[hoveredIdx].detached;
+    dragMode = 'individual';
+    dragNodeIdx = hoveredIdx;
+    dragChainOrder = [];
+    canvas.style.cursor = 'grabbing';
+    lastClickTime = 0;
+    lastClickNodeIdx = -1;
+    draw();
+    return;
+  }
+  lastClickTime = now;
+  lastClickNodeIdx = hoveredIdx;
+
+  // 빈 공간 클릭 → lasso 선택 시작 (Ctrl 눌러 있으면 기존 선택에 추가)
+  if (hoveredIdx < 0) {
+    dragMode = 'lasso';
+    lassoAddMode = !!(e.ctrlKey || e.metaKey);
+    selectionRect = { startX: pos.x, startY: pos.y, endX: pos.x, endY: pos.y };
+    // 추가 모드가 아니면 기존 선택 즉시 해제 (드래그 없이 그냥 클릭 = 전체 해제)
+    if (!lassoAddMode) {
+      for (const n of nodes) n.selected = false;
+    }
+    canvas.style.cursor = 'crosshair';
+    draw();
+    return;
+  }
+
+  const node = nodes[hoveredIdx];
+
+  // 분리된 노드 클릭 → 개별 이동
+  if (node.detached) {
+    saveUndo();
+    dragMode = 'individual';
+    dragNodeIdx = hoveredIdx;
+    dragChainOrder = [];
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  // 체인 내 노드: 선두/후미만 드래그 가능
+  const chain = getChainIndices();
+  if (chain.length === 0) { dragMode = null; return; }
+  const headIdx = chain[0];
+  const tailIdx = chain[chain.length - 1];
+
+  if (hoveredIdx === headIdx) {
+    saveUndo();
+    dragMode = 'chain';
+    dragChainOrder = chain; // 선두 → 후미
+    // 초기 path: 후미 → 선두 (path 끝이 선두 현재 위치)
+    path = [];
+    for (let i = chain.length - 1; i >= 0; i--) {
+      path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+    }
+    canvas.style.cursor = 'grabbing';
+  } else if (hoveredIdx === tailIdx) {
+    saveUndo();
+    dragMode = 'chain';
+    dragChainOrder = chain.slice().reverse(); // 후미 → 선두
+    // 초기 path: 선두 → 후미 (path 끝이 후미 현재 위치)
+    path = [];
+    for (let i = 0; i < chain.length; i++) {
+      path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+    }
+    canvas.style.cursor = 'grabbing';
+  } else {
+    // 중간 노드 → 진형 움직이지 않음
+    dragMode = null;
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  const pos = getMousePos(e);
+  if (dragMode === 'lasso') {
+    selectionRect.endX = pos.x;
+    selectionRect.endY = pos.y;
+    draw();
+    return;
+  }
+  if (dragMode === 'rotate') {
+    const n = nodes[dragNodeIdx];
+    const dx = pos.x - n.x;
+    const dy = pos.y - n.y;
+    if (dx*dx + dy*dy > 4) {
+      n.heading = Math.atan2(dy, dx);
+      draw();
+    }
+    return;
+  }
+  if (dragMode === 'individual') {
+    nodes[dragNodeIdx].x = pos.x;
+    nodes[dragNodeIdx].y = pos.y;
+    // heading update from motion
+    const last = nodes[dragNodeIdx];
+    draw();
+    return;
+  }
+  if (dragMode === 'chain') {
+    const last = path[path.length - 1];
+    const dx = pos.x - last.x;
+    const dy = pos.y - last.y;
+    if (dx*dx + dy*dy > 9) {
+      path.push({x: pos.x, y: pos.y});
+      updateNodesFromPath();
+      draw();
+    }
+    return;
+  }
+  // hover cursor
+  canvas.style.cursor = findNodeAt(pos) >= 0 ? 'grab' : 'default';
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (dragMode === 'lasso') {
+    // 사각형 확정 → 그 안의 노드들을 선택 처리
+    const r = selectionRect;
+    const xmin = Math.min(r.startX, r.endX);
+    const xmax = Math.max(r.startX, r.endX);
+    const ymin = Math.min(r.startY, r.endY);
+    const ymax = Math.max(r.startY, r.endY);
+    const isDrag = (xmax - xmin) > 3 || (ymax - ymin) > 3;
+
+    if (isDrag) {
+      // 드래그 경우: 사각형 안 노드 처리
+      let hitCount = 0;
+      for (const n of nodes) {
+        const inside = n.x >= xmin && n.x <= xmax && n.y >= ymin && n.y <= ymax;
+        if (inside) {
+          if (lassoAddMode) n.selected = !n.selected;  // Ctrl+드래그: 토글
+          else n.selected = true;                        // 일반 드래그: 선택
+          if (n.selected) hitCount++;
+        }
+      }
+      const total = nodes.filter(n => n.selected).length;
+      if (total > 0) showToast(`${total}명 선택됨`);
+    }
+    // 클릭만 한 경우(드래그 없음)는 위 mousedown에서 이미 전체 해제 처리됨
+
+    selectionRect = null;
+    dragMode = null;
+    dragNodeIdx = -1;
+    dragChainOrder = [];
+    canvas.style.cursor = 'default';
+    draw();
+    return;
+  }
+
+  if (dragMode === 'individual') {
+    const idx = dragNodeIdx;
+    if (idx >= 0 && nodes[idx].detached) {
+      if (tryReattach(idx)) showToast('진형에 재연결되었습니다');
+    }
+  }
+  dragMode = null;
+  dragNodeIdx = -1;
+  dragChainOrder = [];
+  path = [];
+  canvas.style.cursor = 'default';
+  draw();
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (dragMode === 'lasso') {
+    selectionRect = null;
+    dragMode = null;
+    canvas.style.cursor = 'default';
+    draw();
+    return;
+  }
+  if (dragMode === 'individual' && dragNodeIdx >= 0 && nodes[dragNodeIdx].detached) {
+    tryReattach(dragNodeIdx);
+  }
+  dragMode = null;
+  dragNodeIdx = -1;
+  dragChainOrder = [];
+  path = [];
+  canvas.style.cursor = 'default';
+  draw();
+});
+
+// Touch support
+function touchPos(e) {
+  const touch = e.touches[0] || e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (touch.clientX - rect.left) * (canvas.width / rect.width),
+    y: (touch.clientY - rect.top) * (canvas.height / rect.height),
+  };
+}
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const pos = touchPos(e);
+  const now = Date.now();
+  const hoveredIdx = findNodeAt(pos);
+
+  if (hoveredIdx >= 0 && hoveredIdx === lastClickNodeIdx && now - lastClickTime < 400) {
+    saveUndo();
+    nodes[hoveredIdx].detached = !nodes[hoveredIdx].detached;
+    dragMode = 'individual';
+    dragNodeIdx = hoveredIdx;
+    dragChainOrder = [];
+    lastClickTime = 0;
+    lastClickNodeIdx = -1;
+    draw();
+    return;
+  }
+  lastClickTime = now;
+  lastClickNodeIdx = hoveredIdx;
+
+  if (hoveredIdx < 0) { dragMode = null; return; }
+  const node = nodes[hoveredIdx];
+  if (node.detached) {
+    saveUndo();
+    dragMode = 'individual';
+    dragNodeIdx = hoveredIdx;
+    dragChainOrder = [];
+    return;
+  }
+  const chain = getChainIndices();
+  if (chain.length === 0) { dragMode = null; return; }
+  const headIdx = chain[0];
+  const tailIdx = chain[chain.length - 1];
+  if (hoveredIdx === headIdx) {
+    saveUndo();
+    dragMode = 'chain';
+    dragChainOrder = chain;
+    path = [];
+    for (let i = chain.length - 1; i >= 0; i--) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+  } else if (hoveredIdx === tailIdx) {
+    saveUndo();
+    dragMode = 'chain';
+    dragChainOrder = chain.slice().reverse();
+    path = [];
+    for (let i = 0; i < chain.length; i++) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+  } else {
+    dragMode = null;
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchmove', (e) => {
+  e.preventDefault();
+  const pos = touchPos(e);
+  if (dragMode === 'individual') {
+    nodes[dragNodeIdx].x = pos.x;
+    nodes[dragNodeIdx].y = pos.y;
+    draw();
+    return;
+  }
+  if (dragMode === 'chain') {
+    const last = path[path.length - 1];
+    const dx = pos.x - last.x;
+    const dy = pos.y - last.y;
+    if (dx*dx + dy*dy > 9) {
+      path.push({x: pos.x, y: pos.y});
+      updateNodesFromPath();
+      draw();
+    }
+  }
+}, {passive: false});
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (dragMode === 'individual' && dragNodeIdx >= 0 && nodes[dragNodeIdx].detached) {
+    if (tryReattach(dragNodeIdx)) showToast('진형에 재연결되었습니다');
+  }
+  dragMode = null;
+  dragNodeIdx = -1;
+  dragChainOrder = [];
+  path = [];
+  draw();
+}, {passive: false});
+
+// Undo
+function saveUndo() {
+  undoStack.push(nodes.map(n => ({...n})));
+  if (undoStack.length > 50) undoStack.shift();
+}
+
+document.getElementById('btnUndo').addEventListener('click', () => {
+  if (undoStack.length === 0) return;
+  nodes = undoStack.pop();
+  path = [];
+  draw();
+});
+
+// Controls
+document.getElementById('nodeCount').addEventListener('change', (e) => {
+  const newCount = Math.max(1, Math.min(50, parseInt(e.target.value) || 23));
+  e.target.value = newCount;
+  resizeNodeCount(newCount);
+  path = [];
+  draw();
+});
+
+const spacingSlider = document.getElementById('spacing');
+spacingSlider.addEventListener('input', (e) => {
+  spacing = parseInt(e.target.value);
+  document.getElementById('spacingVal').textContent = spacing;
+  if (path.length > 0) {
+    updateNodesFromPath();
+    draw();
+  }
+});
+
+// 현재 노드 배치에서 실제 간격을 계산해서 슬라이더에 반영
+function syncSpacingFromNodes() {
+  const chain = getChainIndices();
+  if (chain.length < 2) return;
+  let totalDist = 0;
+  for (let i = 1; i < chain.length; i++) {
+    const dx = nodes[chain[i]].x - nodes[chain[i-1]].x;
+    const dy = nodes[chain[i]].y - nodes[chain[i-1]].y;
+    totalDist += Math.sqrt(dx*dx + dy*dy);
+  }
+  spacing = Math.round(totalDist / (chain.length - 1));
+  spacingSlider.value = Math.min(spacing, 150);
+  spacingSlider.max = Math.max(150, spacing + 20);
+  document.getElementById('spacingVal').textContent = spacing;
+}
+
+// Save keyframe
+function saveKeyframe(nameOverride) {
+  const kf = {
+    name: nameOverride || `진형 ${keyframes.length + 1}`,
+    nodes: nodes.map((n, i) => ({
+      x: Math.round(n.x * 100 / stageW) / 100,
+      y: Math.round(n.y * 100 / stageH) / 100,
+      px: Math.round(n.x),
+      py: Math.round(n.y),
+      heading: Math.round(n.heading * 1000) / 1000,
+      detached: !!n.detached,
+      sitting: !!n.sitting,
+      instrument: getInstrument(i).name,
+    })),
+    timestamp: Date.now(),
+  };
+  keyframes.push(kf);
+  activeKeyframe = keyframes.length - 1;
+  renderKeyframes();
+  showCoords(activeKeyframe);
+}
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  saveKeyframe();
+  showToast('키프레임이 저장되었습니다!');
+});
+
+// Recording
+let isRecording = false;
+let recordTimer = null;
+let recordStartCount = 0;
+
+document.getElementById('btnRecord').addEventListener('click', () => {
+  if (isRecording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+});
+
+function startRecording() {
+  isRecording = true;
+  recordStartCount = keyframes.length;
+  const btn = document.getElementById('btnRecord');
+  btn.classList.add('recording');
+  btn.textContent = '⏹ 녹화 중지';
+  const interval = Math.max(100, parseInt(document.getElementById('recordInterval').value) || 500);
+  // 첫 프레임 즉시 캡처
+  saveKeyframe(`녹화 ${keyframes.length - recordStartCount + 1}`);
+  renderKeyframes();
+  recordTimer = setInterval(() => {
+    saveKeyframe(`녹화 ${keyframes.length - recordStartCount + 1}`);
+    renderKeyframes();
+  }, interval);
+  showToast('녹화 시작 — 자유롭게 드래그하세요');
+}
+
+function stopRecording() {
+  isRecording = false;
+  clearInterval(recordTimer);
+  const btn = document.getElementById('btnRecord');
+  btn.classList.remove('recording');
+  btn.textContent = '⏺ 녹화';
+  const captured = keyframes.length - recordStartCount;
+  showToast(`녹화 종료 — ${captured}개 프레임 캡처됨`);
+}
+
+// 최소 간격: 노드끼리 물리적으로 겹치지 않는 최소 중심 간 거리
+const MIN_NODE_GAP = 32; // px (노드 반지름 13*2 + 여유 6)
+
+// 원에 N명 배치 시 최소 반지름 계산
+function minRadiusForCount(count) {
+  if (count <= 1) return 0;
+  return count * MIN_NODE_GAP / (2 * Math.PI);
+}
+
+// 원진 스냅: 체인 노드를 완벽한 원으로 재배치
+function snapToCircle() {
+  const chain = getChainIndices();
+  if (chain.length < 3) { showToast('체인 노드가 3개 이상 필요합니다.'); return; }
+  saveUndo();
+  // 무게중심
+  let cx = 0, cy = 0;
+  chain.forEach(i => { cx += nodes[i].x; cy += nodes[i].y; });
+  cx /= chain.length; cy /= chain.length;
+  // 평균 반지름
+  let radius = 0;
+  chain.forEach(i => { radius += Math.hypot(nodes[i].x - cx, nodes[i].y - cy); });
+  radius /= chain.length;
+  // 최소 반지름 보장
+  const minR = minRadiusForCount(chain.length);
+  if (radius < minR) radius = minR;
+  if (radius < 20) radius = Math.min(stageW, stageH) * 0.3;
+  // 무대 밖으로 나가지 않도록 상한
+  const maxR = Math.min(stageW, stageH) * 0.44;
+  if (radius > maxR) radius = maxR;
+  // 첫 노드의 현재 각도를 시작점으로
+  const first = nodes[chain[0]];
+  const startAngle = Math.atan2(first.y - cy, first.x - cx);
+  // 진행 방향(시계/반시계) 판정
+  let cw = true;
+  if (chain.length >= 2) {
+    const second = nodes[chain[1]];
+    const a1 = Math.atan2(second.y - cy, second.x - cx);
+    let delta = a1 - startAngle;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    cw = delta > 0;
+  }
+  const step = 2 * Math.PI / chain.length;
+  for (let i = 0; i < chain.length; i++) {
+    const angle = startAngle + (cw ? 1 : -1) * i * step;
+    nodes[chain[i]].x = cx + radius * Math.cos(angle);
+    nodes[chain[i]].y = cy + radius * Math.sin(angle);
+    nodes[chain[i]].heading = angle + (cw ? Math.PI/2 : -Math.PI/2);
+  }
+  draw();
+  syncSpacingFromNodes();
+  showToast(`원진 스냅 완료 (반지름 ${Math.round(radius)}px, 간격 ${spacing}px)`);
+}
+
+// 체인 전체 방향 회전
+function rotateAll(delta) {
+  saveUndo();
+  const chain = getChainIndices();
+  chain.forEach(i => {
+    nodes[i].heading += delta;
+    while (nodes[i].heading > Math.PI) nodes[i].heading -= Math.PI * 2;
+    while (nodes[i].heading < -Math.PI) nodes[i].heading += Math.PI * 2;
+  });
+  draw();
+}
+
+document.getElementById('btnSnapCircle').addEventListener('click', snapToCircle);
+document.getElementById('btnRotate180').addEventListener('click', () => {
+  rotateAll(Math.PI);
+  showToast('체인 방향이 180° 회전되었습니다');
+});
+
+// 겹원진: 안원 + 바깥원
+function makeDoubleCircle() {
+  const innerCount = Math.max(1, Math.min(nodeCount - 1, parseInt(document.getElementById('innerCount').value) || 5));
+  const outerCount = nodeCount - innerCount;
+
+  saveUndo();
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+
+  // 최소 반지름 보장
+  const outerMinR = minRadiusForCount(outerCount);
+  const innerMinR = minRadiusForCount(innerCount);
+  const maxR = Math.min(stageW, stageH) * 0.44;
+
+  // 바깥원 반지름: 무대의 36% 또는 최소 반지름 중 큰 값
+  let outerR = Math.max(Math.min(stageW, stageH) * 0.36, outerMinR);
+  if (outerR > maxR) outerR = maxR;
+
+  // 안원 반지름: 바깥원의 45% 또는 최소 반지름 중 큰 값, 바깥원보다 작아야 함
+  let innerR = Math.max(outerR * 0.45, innerMinR);
+  if (innerR >= outerR - MIN_NODE_GAP) innerR = outerR - MIN_NODE_GAP;
+  if (innerR < innerMinR) {
+    // 안원이 최소 반지름보다 작으면 바깥원을 키움
+    outerR = Math.min(innerMinR + MIN_NODE_GAP * 2, maxR);
+    innerR = innerMinR;
+  }
+
+  // 안원: 상쇠 포함, 시계 방향
+  const innerStart = -Math.PI / 2;
+  for (let i = 0; i < innerCount; i++) {
+    const angle = innerStart + i * (2 * Math.PI / innerCount);
+    nodes[i].x = cx + innerR * Math.cos(angle);
+    nodes[i].y = cy + innerR * Math.sin(angle);
+    nodes[i].heading = angle + Math.PI / 2;
+    nodes[i].detached = true;
+  }
+
+  // 바깥원: 반시계 방향
+  const outerStart = -Math.PI / 2 + 0.3;
+  for (let i = 0; i < outerCount; i++) {
+    const idx = innerCount + i;
+    const angle = outerStart + i * (2 * Math.PI / outerCount);
+    nodes[idx].x = cx + outerR * Math.cos(angle);
+    nodes[idx].y = cy + outerR * Math.sin(angle);
+    nodes[idx].heading = angle - Math.PI / 2;
+    nodes[idx].detached = false;
+  }
+
+  draw();
+  syncSpacingFromNodes();
+  showToast(`겹원진: 안원 ${innerCount}명 (시계), 바깥원 ${outerCount}명 (반시계), 간격 ${spacing}px`);
+}
+
+document.getElementById('btnDoubleCircle').addEventListener('click', makeDoubleCircle);
+
+document.getElementById('btnNanjin').addEventListener('click', () => {
+  saveUndo();
+  arrangeNanjin();
+  draw();
+  syncSpacingFromNodes();
+  showToast('난진: 상쇠 주위로 모이되 같은 악기끼리 분산');
+});
+
+document.getElementById('btnToggleSit').addEventListener('click', () => {
+  saveUndo();
+  // 다수결로 결정: 서 있는 사람이 많으면 전부 앉히고, 앉은 사람이 많으면 전부 일으킴
+  const seated = nodes.filter(n => n.sitting).length;
+  const target = seated < nodes.length / 2;  // 앉은 사람이 소수면 → 다 앉히기
+  for (const n of nodes) n.sitting = target;
+  draw();
+  showToast(target ? '모두 앉음' : '모두 일어섬');
+});
+
+document.getElementById('btnShibiljajin').addEventListener('click', () => {
+  saveUndo();
+  arrangeShibiljajin();
+  draw();
+  syncSpacingFromNodes();
+  showToast('11자진: 두 줄 마주보기 (상쇠 줄 왼쪽)');
+});
+
+document.getElementById('btnClearSel').addEventListener('click', () => {
+  for (const n of nodes) n.selected = false;
+  draw();
+  showToast('선택 해제');
+});
+
+function updateSelectionCount() {
+  const el = document.getElementById('selCount');
+  if (!el) return;
+  const n = nodes.filter(x => x.selected).length;
+  el.textContent = `선택: ${n}`;
+  el.style.color = n > 0 ? '#ffd60a' : '#8b95c5';
+}
+
+// ─── 가락(장단 리듬 꼴) 사전 ─────────────────────────────────────
+// bpm_min/bpm_max: 이 가락의 BPM 범위 (사분음표 기준, "d=숫자"의 숫자). null이면 미입력.
+// bpm_typical: 대표 BPM (드롭다운에서 이 가락을 고르면 슬라이더가 이 값으로 이동. null 가능)
+// beat_structure: '2분박' (1마디=2박), '3분박' (1마디=3박), '혼합박' (장단마다 길이/박자 구조가 다름), 'free' (박자 자유), null
+// jangdan_per_gasrak: 한 가락이 몇 장단인지 (예: 삼채=2, 이채=1, 굿거리=1). null 가능.
+// mari_per_jangdan: 한 장단이 몇 마디인지 (일반적으로 4). null 가능.
+// phrase_grouping: 실연에서 몇 가락 단위로 끊는지 (예: 자진호허굿은 2가락 단위로 많이 끊음). null 가능.
+// aliases: 다른 이름들
+// source: 이 값의 출처 (책 이름, 사용자 구술 등)
+// notes: 자유 형식 설명
+// 목록은 판굿 진행 순서 기준으로 정리 (Overview 3.5절 참조).
+// 표기 규약: "d=숫자"는 "사분음표(♩) = 숫자 BPM"의 축약.
+const gasrakList = [
+  // 어름굿·기본
+  { name: '일채',            bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: 'free', jangdan_per_gasrak: null, mari_per_jangdan: null,
+    notes: '어름굿, 3마당 등에 사용. 일정한 박자 없이 느리게 시작해 점점 빠르게. BPM/장단 개념이 잘 안 맞음.' },
+  { name: '이채',            bpm_min: 130,  bpm_max: 300,  bpm_typical: null,
+    beat_structure: '2분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    source: '고창농악 정리 책',
+    notes: '어름굿 마무리, 1·3·4마당. d=130~300. 한 가락=1장단=4마디=8박.' },
+  { name: '삼채',            bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    aliases: ['덧배기', '자진모리'],
+    notes: '한 가락=2장단, 한 장단=4마디=12박 (12/8박). 한 가락 총 24박.' },
+  { name: '된삼채',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    notes: '삼채와 박자 구조 동일, BPM만 더 빠름.' },
+  { name: '굿거리',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '삼채와 구조 동일(12/8박)이나 약 2배 느림. 한 가락=1장단=12박. 삼채 한 가락(24박)과 절대 시간이 비슷. 4마당 악기춤의 기본.' },
+
+  // 입장굿 — 질굿은 굿거리 계열, 뒤쪽 반 장단에 따라 두 변종
+  { name: '질굿-굿거리',     bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    aliases: ['길굿-굿거리'],
+    notes: '입장굿의 가락 (=길굿의 전라도식). 굿거리 계열. 앞 반 장단은 질굿-삼채와 공통, 뒤 반 장단은 12박을 촘촘히 채워 긴 굿거리 느낌.' },
+  { name: '질굿-삼채',       bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    aliases: ['길굿-삼채'],
+    notes: '입장굿의 가락 변종. 앞 반 장단은 질굿-굿거리와 공통, 뒤 반 장단은 삼채 한 장단 그대로.' },
+  // 1마당
+  { name: '오채질굿',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '혼합박', jangdan_per_gasrak: 5, mari_per_jangdan: null,
+    notes: '1마당 시작. 한 가락=5장단이며 장단마다 길이가 불규칙적으로 다름 (2분박과 3분박이 혼합).' },
+  { name: '된오채질굿',      bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '혼합박', jangdan_per_gasrak: 5, mari_per_jangdan: null,
+    notes: '1마당, 오채질굿의 가속. 오채질굿과 구조 동일 (5장단, 장단별 길이 불규칙).' },
+  { name: '풍류굿',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '1마당, 반연풍 반복. 굿거리 계열, 질굿-삼채와 유사한 구조.' },
+  { name: '느린벙어리삼채',  bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    notes: '1마당. 삼채와 구조 동일. 된벙어리삼채와는 속도 외에도 가락 자체가 살짝 다름.' },
+  { name: '된벙어리삼채',    bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    notes: '1마당, 태극진 여러 번. 삼채와 구조 동일. 느린벙어리삼채와는 속도 외에도 가락 자체가 살짝 다름.' },
+  { name: '음매갱',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 3, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '1마당. 본 가락 3장단 (가락보 근거). 박자 구조 미확정.' },
+  // 2마당
+  { name: '오방진',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '2분박', jangdan_per_gasrak: 4, mari_per_jangdan: 4,
+    notes: '2마당 시작. 한 가락=4장단, 한 장단=4마디×2박=8박. 한 가락 총 32박. 오방진 한 장단 = 진오방진 한 장단 (구조 동일).' },
+  { name: '진오방진',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '2분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '2마당, 달팽이진 5개. 한 가락=1장단=4마디×2박=8박. 오방진과 장단 구조 동일하여 자연스러운 전환 가능.' },
+  { name: '홑맺이',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 5, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '2마당 쇠놀이. 본 가락 5장단 (가락보 근거). 신호가락 별도 존재.' },
+  { name: '음매개갱',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 1, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '2마당 쇠장구놀이 진입. 본 가락 1장단, 짧음 (가락보 근거).' },
+  { name: '겹맺이',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 7, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '2마당 쇠장구놀이 마무리. 본 가락 7장단 (가락보 근거). 홑맺이보다 김. 신호가락 별도 존재.' },
+  // 3마당
+  { name: '난타',            bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 1, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '3마당 0번(도입). 한 줄 8박 연타 (가락보 근거). 구조는 사용자 확인 필요.' },
+  { name: '벙어리일채',      bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 2, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '3마당 시작. 본 가락 2장단 (가락보 근거). 신호가락(=인사가락) 별도. 상쇠 신호로 종료.' },
+  { name: '열두마치',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 3, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '3마당. 본 가락 3장단 (가락보 근거). 이름은 징을 12번 침에서 유래.' },
+  { name: '호허굿',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '혼합박', jangdan_per_gasrak: 6, mari_per_jangdan: null,
+    notes: '3마당, 호허·이허 외침. 된오채질굿의 앞에 한 장단이 더 붙은 형태(총 6장단).' },
+  { name: '자진호허굿',      bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    phrase_grouping: 2,
+    source: '가락보 2026 사전전수 ver. + 사용자 진술',
+    notes: '3마당. 삼채와 구조 동일 (3분박, 2장단). 가락보의 5줄 표기 중 마지막 줄은 맺는 가락, 본 가락은 4줄=2가락 분량. 실연에서 **두 가락 단위로 많이 끊음**.' },
+  { name: '춤굿',            bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    aliases: ['콩등지기 가락'],
+    notes: '3마당 콩등지기 동작, 4마당 잡색춤. 굿거리와 구조 같으나 한 가락이 2장단 (굿거리는 1장단).' },
+  { name: '콩꺾자',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    notes: '3마당. 삼채와 구조 동일.' },
+  { name: '가세치기',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 2, mari_per_jangdan: 4,
+    aliases: ['가세치기 가락'],
+    notes: '3마당, 두 줄이 서로를 통과. 삼채와 구조 동일.' },
+  { name: '미지기',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    aliases: ['미지기 가락', '옆뛰기 가락'],
+    notes: '3마당, 두 줄이 밀고 당김. 삼채와 3분박 구조는 같으나 한 가락이 1장단 (삼채는 2장단). 옆뛰기 시에도 동일 가락.' },
+  { name: '옆뛰기',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    aliases: ['옆지기'],
+    source: '가락보 2026 사전전수 ver.',
+    notes: '3마당. 미지기와 리듬 동일. 자료상 별도 항목으로 표기됨.' },
+  { name: '이채덩더쿵',      bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '2분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    aliases: ['이덩'],
+    notes: '3·4마당, 개인 기량 부분. 이채와 박자 구조 동일 (1장단=4마디×2박=8박).' },
+  // 4마당
+  { name: '반굿거리',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '4마당 악기춤. 굿거리보다 조금 빠름.' },
+  { name: '된굿거리',        bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '3분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '4마당 악기춤. 굿거리·반굿거리보다 빠름.' },
+  { name: '된이채',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: '2분박', jangdan_per_gasrak: 1, mari_per_jangdan: 4,
+    notes: '4마당 부포춤 마무리. 이채와 박자 구조 동일, BPM만 더 빠름.' },
+  // 마무리
+  { name: '인사굿',          bpm_min: null, bpm_max: null, bpm_typical: null,
+    beat_structure: null, jangdan_per_gasrak: 1, mari_per_jangdan: null,
+    source: '가락보 2026 사전전수 ver.',
+    notes: '판굿 종료. 진형 자유. 인사굿 × 2번 (원진 안/밖). 1장단 (가락보 근거).' },
+];
+
+let currentGasrak = null; // 현재 선택된 가락 이름
+let currentBPM = 120;
+
+// 슬라이더 값에 어울리는 가락만 드롭다운에 넣기
+function refreshGasrakDropdown() {
+  const sel = document.getElementById('gasrakSelect');
+  if (!sel) return;
+  const prev = sel.value;
+  // 초기화
+  sel.innerHTML = '<option value="">— 가락 선택 —</option>';
+
+  // 필터링: BPM 범위 안에 currentBPM이 들어가는 가락
+  const matching = [];
+  const undefined_ = [];
+  for (const g of gasrakList) {
+    if (g.bpm_min != null && g.bpm_max != null) {
+      if (currentBPM >= g.bpm_min && currentBPM <= g.bpm_max) {
+        matching.push(g);
+      }
+    } else {
+      undefined_.push(g);
+    }
+  }
+
+  // 매칭되는 가락 (있으면 그룹으로 표시)
+  if (matching.length > 0) {
+    const og = document.createElement('optgroup');
+    og.label = `현재 BPM(${currentBPM})에 어울리는 가락`;
+    for (const g of matching) {
+      const opt = document.createElement('option');
+      opt.value = g.name;
+      const beatTag = g.beat_structure ? ` ${g.beat_structure}` : '';
+      opt.textContent = g.bpm_typical
+        ? `${g.name}${beatTag} (${g.bpm_min}–${g.bpm_max}, 표준 ${g.bpm_typical})`
+        : `${g.name}${beatTag} (${g.bpm_min}–${g.bpm_max})`;
+      og.appendChild(opt);
+    }
+    sel.appendChild(og);
+  }
+
+  // BPM 데이터가 아직 없는 가락은 별도 그룹으로 (필터링 못 하니 항상 표시)
+  if (undefined_.length > 0) {
+    const og = document.createElement('optgroup');
+    og.label = 'BPM 미입력 (필터링 불가)';
+    for (const g of undefined_) {
+      const opt = document.createElement('option');
+      opt.value = g.name;
+      const beatTag = g.beat_structure ? ` ${g.beat_structure}` : '';
+      opt.textContent = `${g.name}${beatTag}`;
+      og.appendChild(opt);
+    }
+    sel.appendChild(og);
+  }
+
+  // 이전 선택이 새 목록에 있으면 유지
+  if (prev && [...sel.options].some(o => o.value === prev)) {
+    sel.value = prev;
+  }
+}
+
+// 슬라이더 <-> 숫자 입력 <-> 드롭다운 연동
+(function initBPMControls() {
+  const slider = document.getElementById('bpmSlider');
+  const numberInput = document.getElementById('bpmValue');
+  const sel = document.getElementById('gasrakSelect');
+  if (!slider || !numberInput || !sel) return;
+
+  function setBPM(v, source) {
+    v = Math.max(30, Math.min(320, Math.round(v)));
+    currentBPM = v;
+    if (source !== 'slider') slider.value = v;
+    if (source !== 'number') numberInput.value = v;
+    refreshGasrakDropdown();
+  }
+
+  slider.addEventListener('input', () => setBPM(parseInt(slider.value), 'slider'));
+  numberInput.addEventListener('input', () => {
+    const v = parseInt(numberInput.value);
+    if (!isNaN(v)) setBPM(v, 'number');
+  });
+
+  sel.addEventListener('change', () => {
+    currentGasrak = sel.value || null;
+    if (!currentGasrak) return;
+    const g = gasrakList.find(x => x.name === currentGasrak);
+    // 대표 BPM이 있으면 슬라이더도 그 값으로 이동
+    if (g && g.bpm_typical != null) {
+      setBPM(g.bpm_typical, 'gasrak');
+      // dropdown 재구성 후에도 현재 가락이 여전히 유효하도록
+      sel.value = currentGasrak;
+    }
+    showToast(`가락 선택: ${currentGasrak}`);
+  });
+
+  refreshGasrakDropdown();
+})();
+
+// Clear
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (confirm('모든 노드 위치를 초기화하시겠습니까?')) {
+    initNodes();
+    path = [];
+    undoStack = [];
+    draw();
+  }
+});
+
+// Keyframes list
+function renderKeyframes() {
+  const list = document.getElementById('keyframesList');
+  list.innerHTML = '';
+  keyframes.forEach((kf, i) => {
+    const div = document.createElement('div');
+    div.className = 'keyframe-item' + (i === activeKeyframe ? ' active' : '');
+    div.innerHTML = `<span class="num">${i+1}</span><span class="name">${kf.name}</span><span class="del" data-idx="${i}">✕</span>`;
+    div.addEventListener('click', (e) => {
+      if (e.target.classList.contains('del')) {
+        keyframes.splice(parseInt(e.target.dataset.idx), 1);
+        activeKeyframe = Math.min(activeKeyframe, keyframes.length - 1);
+        renderKeyframes();
+        return;
+      }
+      activeKeyframe = i;
+      loadKeyframe(i);
+      renderKeyframes();
+    });
+    list.appendChild(div);
+  });
+  list.scrollTop = list.scrollHeight;
+}
+
+function loadKeyframe(idx) {
+  if (idx < 0 || idx >= keyframes.length) return;
+  const kf = keyframes[idx];
+  for (let i = 0; i < Math.min(nodes.length, kf.nodes.length); i++) {
+    nodes[i].x = kf.nodes[i].px;
+    nodes[i].y = kf.nodes[i].py;
+    if (kf.nodes[i].heading !== undefined) nodes[i].heading = kf.nodes[i].heading;
+    nodes[i].detached = !!kf.nodes[i].detached;
+    nodes[i].sitting = !!kf.nodes[i].sitting;
+  }
+  path = [];
+  draw();
+  syncSpacingFromNodes();
+  showCoords(idx);
+}
+
+function showCoords(idx) {
+  if (idx < 0 || idx >= keyframes.length) return;
+  const kf = keyframes[idx];
+  let text = `// ${kf.name}\n`;
+  kf.nodes.forEach((n, i) => {
+    text += `${i+1}. ${n.instrument}: (${n.x}, ${n.y})\n`;
+  });
+  document.getElementById('coordOutput').textContent = text;
+}
+
+// Playback
+document.getElementById('btnPlayback').addEventListener('click', () => {
+  if (keyframes.length < 2) { showToast('키프레임이 2개 이상 필요합니다.'); return; }
+  if (isPlaying) { stopPlayback(); return; }
+  isPlaying = true;
+  document.getElementById('btnPlayback').textContent = '⏹ 정지';
+  document.getElementById('btnPlayback').classList.add('active');
+  const speed = parseInt(document.getElementById('playSpeed').value);
+
+  // 첫 번째 키프레임으로 즉시 스냅
+  activeKeyframe = 0;
+  loadKeyframe(0);
+  renderKeyframes();
+
+  let idx = 1;
+  function playNext() {
+    if (!isPlaying) return;
+    if (idx >= keyframes.length) { stopPlayback(); return; }
+    activeKeyframe = idx;
+    renderKeyframes();
+    animateToKeyframe(idx, speed * 0.7, () => {
+      idx++;
+      playTimer = setTimeout(playNext, speed * 0.3);
+    });
+  }
+  // 짧은 대기 후 시작
+  playTimer = setTimeout(playNext, speed * 0.3);
+});
+
+function stopPlayback() {
+  isPlaying = false;
+  clearTimeout(playTimer);
+  document.getElementById('btnPlayback').textContent = '▶ 재생';
+  document.getElementById('btnPlayback').classList.remove('active');
+  document.getElementById('btnPlayAccel').textContent = '▶▶ 가속';
+  document.getElementById('btnPlayAccel').classList.remove('active');
+}
+
+// 가속 재생: 프레임이 진행될수록 전환 속도가 빨라짐
+document.getElementById('btnPlayAccel').addEventListener('click', () => {
+  if (keyframes.length < 2) { showToast('키프레임이 2개 이상 필요합니다.'); return; }
+  if (isPlaying) { stopPlayback(); return; }
+  isPlaying = true;
+  document.getElementById('btnPlayAccel').textContent = '⏹ 정지';
+  document.getElementById('btnPlayAccel').classList.add('active');
+
+  const baseSpeed = parseInt(document.getElementById('playSpeed').value);
+  activeKeyframe = 0;
+  loadKeyframe(0);
+  renderKeyframes();
+
+  let idx = 1;
+  function playNextAccel() {
+    if (!isPlaying) return;
+    if (idx >= keyframes.length) { stopPlayback(); return; }
+    // 진행률 0→1에 따라 속도를 baseSpeed → baseSpeed*0.15로 줄임 (= 빨라짐)
+    const progress = idx / (keyframes.length - 1);
+    const currentSpeed = baseSpeed * (1 - progress * 0.85);
+    activeKeyframe = idx;
+    renderKeyframes();
+    animateToKeyframe(idx, currentSpeed * 0.7, () => {
+      idx++;
+      playTimer = setTimeout(playNextAccel, currentSpeed * 0.3);
+    });
+  }
+  playTimer = setTimeout(playNextAccel, baseSpeed * 0.3);
+});
+
+function animateToKeyframe(idx, duration, onDone) {
+  const kf = keyframes[idx];
+  const startPositions = nodes.map(n => ({x: n.x, y: n.y, heading: n.heading, sitting: !!n.sitting}));
+  const startTime = performance.now();
+  const wasPlaying = isPlaying;
+
+  function step(time) {
+    if (wasPlaying && !isPlaying) return; // 재생 중지 시 즉시 종료
+    const t = Math.min(1, (time - startTime) / duration);
+    const ease = t < 0.5 ? 2*t*t : -1 + (4-2*t)*t;
+    for (let i = 0; i < Math.min(nodes.length, kf.nodes.length); i++) {
+      nodes[i].x = startPositions[i].x + (kf.nodes[i].px - startPositions[i].x) * ease;
+      nodes[i].y = startPositions[i].y + (kf.nodes[i].py - startPositions[i].y) * ease;
+      if (kf.nodes[i].heading !== undefined) {
+        let delta = kf.nodes[i].heading - startPositions[i].heading;
+        while (delta > Math.PI) delta -= Math.PI * 2;
+        while (delta < -Math.PI) delta += Math.PI * 2;
+        nodes[i].heading = startPositions[i].heading + delta * ease;
+      }
+      // 앉음은 이산 상태 — 중간에 스위치
+      const targetSit = !!kf.nodes[i].sitting;
+      nodes[i].sitting = t < 0.5 ? startPositions[i].sitting : targetSit;
+    }
+    draw();
+    if (t < 1) requestAnimationFrame(step);
+    else if (onDone) onDone();
+  }
+  requestAnimationFrame(step);
+}
+
+document.getElementById('btnPrev').addEventListener('click', () => {
+  if (keyframes.length === 0) return;
+  activeKeyframe = Math.max(0, activeKeyframe - 1);
+  loadKeyframe(activeKeyframe);
+  renderKeyframes();
+});
+
+document.getElementById('btnNext').addEventListener('click', () => {
+  if (keyframes.length === 0) return;
+  activeKeyframe = Math.min(keyframes.length - 1, activeKeyframe + 1);
+  loadKeyframe(activeKeyframe);
+  renderKeyframes();
+});
+
+document.getElementById('playSpeed').addEventListener('input', (e) => {
+  document.getElementById('speedVal').textContent = (parseInt(e.target.value)/1000).toFixed(1) + 's';
+});
+
+// Export
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (keyframes.length === 0) { showToast('저장된 키프레임이 없습니다.'); return; }
+  let text = `고창농악 진형 기록\n무대 크기: ${stageW} x ${stageH}\n${'='.repeat(40)}\n\n`;
+  keyframes.forEach((kf, i) => {
+    text += `[${kf.name}]\n`;
+    kf.nodes.forEach((n, j) => {
+      text += `  ${j+1}. ${n.instrument}: (${n.x}, ${n.y})\n`;
+    });
+    text += '\n';
+  });
+  navigator.clipboard.writeText(text).then(() => showToast('좌표가 클립보드에 복사되었습니다!'));
+});
+
+document.getElementById('btnExportJSON').addEventListener('click', () => {
+  if (keyframes.length === 0) { showToast('저장된 키프레임이 없습니다.'); return; }
+  const data = {
+    title: '고창농악 진형',
+    stageWidth: stageW,
+    stageHeight: stageH,
+    nodeCount: nodeCount,
+    keyframes: keyframes.map((kf, i) => ({
+      index: i,
+      name: kf.name,
+      positions: kf.nodes.map(n => ({
+        instrument: n.instrument,
+        relX: n.x,
+        relY: n.y,
+        absX: n.px,
+        absY: n.py,
+      })),
+    })),
+  };
+  const json = JSON.stringify(data, null, 2);
+  navigator.clipboard.writeText(json).then(() => showToast('JSON이 클립보드에 복사되었습니다!'));
+});
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  // 입력 필드에서는 단축키 무시
+  const tag = (e.target && e.target.tagName || '').toUpperCase();
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('btnUndo').click(); }
+  if (e.ctrlKey && e.key === 's') { e.preventDefault(); document.getElementById('btnSave').click(); }
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+    e.preventDefault();
+    for (const n of nodes) n.selected = true;
+    draw();
+    showToast(`전체 ${nodes.length}명 선택됨`);
+  }
+  if (e.key === 'Escape') {
+    if (nodes.some(n => n.selected)) {
+      for (const n of nodes) n.selected = false;
+      draw();
+    }
+  }
+  if (e.key === 'ArrowLeft') document.getElementById('btnPrev').click();
+  if (e.key === 'ArrowRight') document.getElementById('btnNext').click();
+});
+
+// 태극진: 원진 안에 맞는 S자 (반타원 두 개)
+// halfH = 세로 반지름 (원진 반지름의 절반, 고정)
+// halfW = 가로 반지름 (간격 유지를 위해 조정 가능)
+function generateTaegukPath(cx, cy, halfH, halfW, steps) {
+  const pts = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    let x, y;
+    if (t <= 0.5) {
+      // 상반타원: 꼭대기에서 오른쪽으로 돌아 중심까지
+      const angle = -Math.PI / 2 + (t / 0.5) * Math.PI;
+      x = cx + halfW * Math.cos(angle);
+      y = (cy - halfH) + halfH * Math.sin(angle);
+    } else {
+      // 하반타원: 중심에서 왼쪽으로 돌아 바닥까지 (x 반전 → S자)
+      const angle = -Math.PI / 2 + ((t - 0.5) / 0.5) * Math.PI;
+      x = cx - halfW * Math.cos(angle);
+      y = (cy + halfH) + halfH * Math.sin(angle);
+    }
+    pts.push({x, y});
+  }
+  return pts;
+}
+
+function measurePathLength(pts) {
+  let len = 0;
+  for (let i = 1; i < pts.length; i++) {
+    len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  }
+  return len;
+}
+
+// 경로 위에 균등 간격으로 N개 점 배치
+function distributeOnPath(pts, count) {
+  const totalLen = measurePathLength(pts);
+  const segLen = totalLen / (count - 1);
+  const result = [{x: pts[0].x, y: pts[0].y}];
+  let accumulated = 0;
+  let ptIdx = 1;
+  for (let i = 1; i < count; i++) {
+    const targetDist = i * segLen;
+    while (ptIdx < pts.length && accumulated + Math.hypot(pts[ptIdx].x - pts[ptIdx - 1].x, pts[ptIdx].y - pts[ptIdx - 1].y) < targetDist) {
+      accumulated += Math.hypot(pts[ptIdx].x - pts[ptIdx - 1].x, pts[ptIdx].y - pts[ptIdx - 1].y);
+      ptIdx++;
+    }
+    if (ptIdx >= pts.length) {
+      result.push({x: pts[pts.length - 1].x, y: pts[pts.length - 1].y});
+    } else {
+      const segDist = Math.hypot(pts[ptIdx].x - pts[ptIdx - 1].x, pts[ptIdx].y - pts[ptIdx - 1].y);
+      const t = segDist > 0 ? (targetDist - accumulated) / segDist : 0;
+      result.push({
+        x: pts[ptIdx - 1].x + (pts[ptIdx].x - pts[ptIdx - 1].x) * t,
+        y: pts[ptIdx - 1].y + (pts[ptIdx].y - pts[ptIdx - 1].y) * t,
+      });
+    }
+  }
+  return result;
+}
+
+// 노드들을 태극진 배치로 설정
+function arrangeTaeguk() {
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+  const wonR = Math.min(stageW, stageH) * 0.36; // 원진 반지름
+  const halfH = wonR / 2; // 세로: 원진 안에 딱 맞게 고정
+  let halfW = halfH * 0.7; // 가로: 기본값 (찌그러진 타원)
+
+  // 간격 유지를 위해 가로를 조정 (원진 안에 맞는 범위 내에서)
+  const neededLen = (nodeCount - 1) * MIN_NODE_GAP;
+  let pts = generateTaegukPath(cx, cy, halfH, halfW, 300);
+  let len = measurePathLength(pts);
+
+  while (len < neededLen && halfW < wonR * 0.9) {
+    halfW += 3;
+    pts = generateTaegukPath(cx, cy, halfH, halfW, 300);
+    len = measurePathLength(pts);
+  }
+
+  // 균등 배치
+  const positions = distributeOnPath(pts, nodeCount);
+
+  for (let i = 0; i < nodeCount; i++) {
+    nodes[i].x = positions[i].x;
+    nodes[i].y = positions[i].y;
+    nodes[i].detached = false;
+    // 진행 방향 (다음 노드를 향함)
+    if (i < nodeCount - 1) {
+      nodes[i].heading = Math.atan2(positions[i + 1].y - positions[i].y, positions[i + 1].x - positions[i].x);
+    } else {
+      nodes[i].heading = nodes[i - 1].heading;
+    }
+  }
+}
+
+// 경로 보간 (Catmull-Rom 스플라인)
+function catmullRomInterpolate(waypoints, totalPoints) {
+  const pts = [];
+  // 앞뒤에 가상 점 추가 (경계 처리)
+  const wp = [waypoints[0], ...waypoints, waypoints[waypoints.length - 1]];
+  const segs = wp.length - 3;
+  const ptsPerSeg = Math.ceil(totalPoints / segs);
+
+  for (let s = 0; s < segs; s++) {
+    const p0 = wp[s], p1 = wp[s+1], p2 = wp[s+2], p3 = wp[s+3];
+    const steps = (s === segs - 1) ? ptsPerSeg : ptsPerSeg;
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps;
+      const t2 = t*t, t3 = t2*t;
+      const x = 0.5 * ((2*p1.x) + (-p0.x + p2.x)*t + (2*p0.x - 5*p1.x + 4*p2.x - p3.x)*t2 + (-p0.x + 3*p1.x - 3*p2.x + p3.x)*t3);
+      const y = 0.5 * ((2*p1.y) + (-p0.y + p2.y)*t + (2*p0.y - 5*p1.y + 4*p2.y - p3.y)*t2 + (-p0.y + 3*p1.y - 3*p2.y + p3.y)*t3);
+      pts.push({x, y});
+    }
+  }
+  pts.push(wp[wp.length - 2]); // 마지막 점
+  return pts;
+}
+
+// 상쇠의 전체 경로: 시계방향 원진 → S곡선(태극) → 반시계방향 원진
+// 핵심: 태극진은 원진의 회전 방향을 뒤집는다.
+// - Pre 원진: 시계방향(각도 증가). 6시에서 끝남.
+// - S커브 하반: 6시에서 안쪽으로 진입, 중심을 지나 12시에 도달
+// - Post 원진: 12시에서 진행 방향이 왼쪽(서쪽). 그 자리에서 왼쪽으로 진행하는 원은 반시계방향.
+function buildTransitionPath(cx, cy, R) {
+  const keyPts = [];
+
+  // 1. Pre-S 원진: 시계방향으로 약 1.5바퀴, 6시에서 끝남
+  // 시작: 12시(-π/2), 끝: 6시(+π/2). 시계방향 = 각도 증가.
+  // 1.5바퀴 = 시작각 -π/2부터 끝각 π/2 + 2π까지 = 총 3π
+  const preStart = -Math.PI / 2;
+  const preEnd = Math.PI / 2 + Math.PI * 2; // 1.5바퀴 후 6시
+  const preSteps = 36;
+  for (let i = 0; i <= preSteps; i++) {
+    const t = i / preSteps;
+    const θ = preStart + (preEnd - preStart) * t;
+    keyPts.push({x: cx + R * Math.cos(θ), y: cy + R * Math.sin(θ)});
+  }
+  // 마지막 점: (cx, cy + R) = 6시 방향
+
+  // 2. S커브: 6시에서 안쪽으로 진입 → 중심 통과 → 12시로 탈출
+  // 곡률 연속성: 시계방향 원에서 6시에 도달한 사람의 진행 방향은 서쪽(왼쪽).
+  // 따라서 S자 하반은 왼쪽으로 부풀어야 자연스럽게 이어진다.
+  // 12시에 도달했을 때 진행 방향은 서쪽(왼쪽) → 그 위치에서 왼쪽으로 가면 반시계방향 원진.
+  // 따라서 S자 상반은 오른쪽으로 부풀어야 12시에서 왼쪽 접선으로 합류.
+  const half = R / 2;
+  const sSteps = 24;
+
+  // 하반: 6시 → 왼쪽으로 불룩 → 중심
+  // center = (cx, cy + half), 반지름 half
+  // φ: π/2(아래) → -π/2(위), 매 단계마다 (cx - half·cos(φ), (cy+half) + half·sin(φ))
+  // φ=π/2:  (cx - 0,    cy + half + half) = (cx, cy + R) ← 6시 ✓
+  // φ=0:    (cx - half, cy + half)        ← 7-8시 영역, 왼쪽으로 불룩
+  // φ=-π/2: (cx - 0,    cy + half - half) = (cx, cy) ← 중심 ✓
+  for (let i = 1; i <= sSteps; i++) {
+    const t = i / sSteps;
+    const φ = Math.PI / 2 - Math.PI * t;
+    keyPts.push({
+      x: cx - half * Math.cos(φ),
+      y: (cy + half) + half * Math.sin(φ),
+    });
+  }
+
+  // 상반: 중심 → 오른쪽으로 불룩 → 12시
+  // center = (cx, cy - half), 반지름 half
+  // φ=π/2:  (cx + 0,    cy - half + half) = (cx, cy) ← 중심 ✓
+  // φ=0:    (cx + half, cy - half)        ← 1-2시 영역, 오른쪽으로 불룩
+  // φ=-π/2: (cx + 0,    cy - half - half) = (cx, cy - R) ← 12시 ✓
+  for (let i = 1; i <= sSteps; i++) {
+    const t = i / sSteps;
+    const φ = Math.PI / 2 - Math.PI * t;
+    keyPts.push({
+      x: cx + half * Math.cos(φ),
+      y: (cy - half) + half * Math.sin(φ),
+    });
+  }
+  // 마지막 점: (cx, cy - R) = 12시
+
+  // 3. Post-S 원진: 반시계방향으로 약 1.5바퀴
+  // 시작: 12시(-π/2). S커브 끝에서 진행 방향은 왼쪽(서쪽).
+  // 그 위치에서 왼쪽으로 가는 원의 접선 → 각도가 감소하는 방향 = 반시계방향.
+  // 시작각 -π/2부터 끝각 -π/2 - 3π까지 (1.5바퀴 반시계).
+  const postStart = -Math.PI / 2;
+  const postEnd = -Math.PI / 2 - Math.PI * 3;
+  const postSteps = 36;
+  for (let i = 1; i <= postSteps; i++) {
+    const t = i / postSteps;
+    const θ = postStart + (postEnd - postStart) * t;
+    keyPts.push({x: cx + R * Math.cos(θ), y: cy + R * Math.sin(θ)});
+  }
+
+  return keyPts;
+}
+
+// 경로 위에 노드 배치 (뱀처럼 따라가기)
+function placeNodesOnPath(densePath, headDist, nodeSpacing, count) {
+  // 누적 거리 배열
+  const cumDist = [0];
+  for (let i = 1; i < densePath.length; i++) {
+    cumDist.push(cumDist[i-1] + Math.hypot(
+      densePath[i].x - densePath[i-1].x,
+      densePath[i].y - densePath[i-1].y
+    ));
+  }
+  const totalLen = cumDist[cumDist.length - 1];
+
+  function getPointAtDist(d) {
+    if (d <= 0) return {...densePath[0]};
+    if (d >= totalLen) return {...densePath[densePath.length - 1]};
+    // 이진 탐색
+    let lo = 0, hi = cumDist.length - 1;
+    while (lo < hi - 1) {
+      const mid = (lo + hi) >> 1;
+      if (cumDist[mid] < d) lo = mid; else hi = mid;
+    }
+    const seg = cumDist[hi] - cumDist[lo];
+    const t = seg > 0 ? (d - cumDist[lo]) / seg : 0;
+    return {
+      x: densePath[lo].x + (densePath[hi].x - densePath[lo].x) * t,
+      y: densePath[lo].y + (densePath[hi].y - densePath[lo].y) * t,
+    };
+  }
+
+  const positions = [];
+  for (let i = 0; i < count; i++) {
+    const d = headDist - i * nodeSpacing;
+    positions.push(getPointAtDist(Math.max(0, d)));
+  }
+  return positions;
+}
+
+// 난진(亂陣): 어름굿에서 사용. 일정한 형태 없음.
+// 규칙 1: 치배들이 상쇠 주위로 모임 (상쇠 = 1번)
+// 규칙 2: 같은 악기끼리 인접하지 않게 분산
+// 11자진(11字陣): 두 줄 평행 마주보기. 방법 1 = 원진에서 접기 (O → U).
+// 사용자 규칙 (Overview 참조):
+//   - head(1번, 상쇠)와 tail(nodeCount-1번)이 11자진 맨 앞 끝, 마주봄
+//   - 원진 앞쪽 절반이 상쇠 줄, 뒤쪽 절반이 막쇠 줄
+//   - 홀수 인원 시 맨 앞 사람 줄이 한 명 적음 (23명 → 11 + 12)
+//   - 3마당 규칙: 두 줄로 갈라질 때 상쇠는 항상 왼쪽 → 관객 시점 상쇠 줄 왼쪽
+//   - 두 줄이 서로 마주봄
+function arrangeShibiljajin() {
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+
+  // 분배: 상쇠 줄(짧은 줄) + 막쇠 줄(긴 줄)
+  // 23명이면 상쇠 줄 = 11명(id 0~10), 막쇠 줄 = 12명(id 11~22, 뒤쪽 절반)
+  const sangsoeLen = Math.floor(nodeCount / 2);   // 짧은 줄: 23→11
+  const makseoLen = nodeCount - sangsoeLen;       // 긴 줄:   23→12
+
+  // 간격 및 배치
+  const spacing = Math.max(38, MIN_NODE_GAP + 6); // 노드 간 세로 간격
+  const lineGap = Math.max(140, spacing * 3);     // 두 줄 사이 가로 간격
+
+  // 상쇠 줄 왼쪽, 막쇠 줄 오른쪽 (관객 시점)
+  const sangsoeX = cx - lineGap / 2;
+  const makseoX = cx + lineGap / 2;
+
+  // 두 줄 다 무대 중앙을 기준으로 세로 중앙 정렬
+  // 맨 앞 끝(head, tail)이 같은 y (예: 무대 위쪽), 뒤로 갈수록 y 증가
+  const longest = Math.max(sangsoeLen, makseoLen);
+  const startY = cy - (longest - 1) * spacing / 2;
+
+  // 상쇠 줄: id 0(상쇠) → id 10, 맨 앞이 위
+  for (let i = 0; i < sangsoeLen; i++) {
+    nodes[i].x = sangsoeX;
+    nodes[i].y = startY + i * spacing;
+    nodes[i].heading = 0;         // 오른쪽(막쇠 줄) 마주봄
+    nodes[i].detached = false;
+    // sitting은 유지
+  }
+
+  // 막쇠 줄: id nodeCount-1(말법고=tail) → id sangsoeLen, 맨 앞이 위
+  // 규칙: tail이 맨 앞. 원진의 뒤쪽 절반이 이 줄이 됨.
+  // 즉, id nodeCount-1 → nodeCount-2 → ... → sangsoeLen 순으로 위→아래
+  for (let k = 0; k < makseoLen; k++) {
+    const nodeIdx = nodeCount - 1 - k;   // tail부터 시작
+    nodes[nodeIdx].x = makseoX;
+    nodes[nodeIdx].y = startY + k * spacing;
+    nodes[nodeIdx].heading = Math.PI;    // 왼쪽(상쇠 줄) 마주봄
+    nodes[nodeIdx].detached = false;
+  }
+}
+
+// 난진(亂陣): 어름굿에서 사용. 일정한 형태 없음.
+// 규칙 1: 치배들이 상쇠 주위로 모임 (상쇠 = 1번)
+// 규칙 2: 같은 악기끼리 인접하지 않게 분산
+// → 매번 약간씩 다른 모양으로 배치 (난진의 본질)
+function arrangeNanjin() {
+  const cx = stageW / 2;
+  const cy = stageH / 2;
+
+  // 상쇠는 중앙
+  nodes[0].x = cx;
+  nodes[0].y = cy;
+  nodes[0].heading = Math.PI / 2; // 청중 방향
+  nodes[0].detached = false;
+
+  // 같은 악기끼리 묶기 위해 색상 그룹 추출
+  const groups = {};
+  for (let i = 1; i < nodeCount; i++) {
+    const c = getInstrument(i).color;
+    if (!groups[c]) groups[c] = [];
+    groups[c].push(i);
+  }
+
+  // 후보 위치를 만들고, 같은 악기끼리 인접하지 않도록 배치 시도
+  const placed = []; // {x, y, color, idx}
+  const minSameColorDist = 70; // 같은 악기 최소 거리
+  const minAnyDist = 36;       // 모든 노드 최소 거리
+  const clusterR = Math.min(stageW, stageH) * 0.3; // 클러스터 반경
+
+  // 라운드 로빈으로 색상을 섞으면서 좌표를 추첨
+  const allIndices = [];
+  const groupKeys = Object.keys(groups);
+  let maxLen = 0;
+  groupKeys.forEach(k => maxLen = Math.max(maxLen, groups[k].length));
+  for (let r = 0; r < maxLen; r++) {
+    for (const k of groupKeys) {
+      if (groups[k][r] !== undefined) allIndices.push(groups[k][r]);
+    }
+  }
+
+  for (const i of allIndices) {
+    const myColor = getInstrument(i).color;
+    let best = null;
+    let bestScore = -Infinity;
+    // 50번 시도해서 가장 좋은 자리 선택
+    for (let attempt = 0; attempt < 50; attempt++) {
+      // 상쇠 주위로 가우시안 분포에 가깝게
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.sqrt(Math.random()) * clusterR + 40; // 상쇠와 최소 40px 거리
+      const x = cx + Math.cos(angle) * dist;
+      const y = cy + Math.sin(angle) * dist;
+
+      // 무대 안에 있는지 확인 (여백 30px)
+      if (x < 30 || x > stageW - 30 || y < 30 || y > stageH - 30) continue;
+
+      // 모든 기존 노드와의 최소 거리 확인
+      let validAny = true;
+      let minSameColor = Infinity;
+      // 상쇠와의 거리
+      if (Math.hypot(x - cx, y - cy) < 40) continue;
+      for (const p of placed) {
+        const d = Math.hypot(x - p.x, y - p.y);
+        if (d < minAnyDist) { validAny = false; break; }
+        if (p.color === myColor && d < minSameColor) minSameColor = d;
+      }
+      if (!validAny) continue;
+
+      // 점수: 같은 악기와는 멀수록 좋고, 상쇠와는 너무 멀지 않을수록 좋음
+      const distFromSangsoe = Math.hypot(x - cx, y - cy);
+      const score = (minSameColor === Infinity ? 200 : minSameColor)
+                  - distFromSangsoe * 0.3
+                  - (minSameColor < minSameColorDist ? 100 : 0);
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = {x, y};
+      }
+    }
+
+    // 후보가 없으면 강제 배치 (드물지만 안전장치)
+    if (!best) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = clusterR * (0.5 + Math.random() * 0.5);
+      best = {x: cx + Math.cos(angle) * dist, y: cy + Math.sin(angle) * dist};
+    }
+
+    nodes[i].x = best.x;
+    nodes[i].y = best.y;
+    // 시선은 대략 상쇠를 향하되 약간의 무작위성
+    nodes[i].heading = Math.atan2(cy - best.y, cx - best.x) + (Math.random() - 0.5) * 0.6;
+    nodes[i].detached = false;
+
+    placed.push({x: best.x, y: best.y, color: myColor, idx: i});
+  }
+}
+
+// Init
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+initNodes();
+syncSpacingFromNodes();
+draw();
+
+// 난진 1장만 — 사용자 요청: "난진을 그려라"
+if (nodeCount === 23) {
+  arrangeNanjin();
+  draw();
+  saveKeyframe('난진 (어름굿)');
+  loadKeyframe(0);
+  activeKeyframe = 0;
+  renderKeyframes();
+  draw();
+}
+</script>
+</body>
+</html>

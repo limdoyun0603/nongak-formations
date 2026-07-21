@@ -1,0 +1,217 @@
+{
+  "name": "달팽이진",
+  "name_en": "Dalpaengyi-jin (Snail formation / Spiral)",
+  "name_romanized": "Dalpaengyijin",
+  "description": "반시계방향으로 촘촘하게 말리는 나선 형태. 달팽이 껍데기를 닮아 이렇게 부름.",
+  "description_en": "A counterclockwise tightly wound spiral resembling a snail shell.",
+  "source": "고창농악 2마당 (진오방진)",
+  "parameters": {
+    "person_count": 23,
+    "direction": "반시계방향 (말기), 시계방향 (풀기)",
+    "tightness_px": 14,
+    "typical_count_per_madang": "5개 (사방 4 + 중앙 1), 약식은 1개 또는 3개 (홀수)"
+  },
+  "rules": [
+    "상쇠가 먼저 나선을 말고, 치배들이 모두 따라붙으면 상쇠가 중앙에서 시계방향으로 U턴하여 나선을 풀고 나옴",
+    "나선을 다 풀고 다음 달팽이진을 시작할 필요는 없음 — 상쇠가 빠져나오면 뒤쪽 치배는 알아서 풀리며 따라옴",
+    "5개를 그릴 때 사방 4개의 순서는 인접하지 않게 (대각선 점프). 중앙은 항상 마지막. 예: 동→서→남→북→중앙"
+  ],
+  "variants": [
+    {
+      "name": "오방진 꽃 변형",
+      "description": "달팽이를 말다가 신호 → 오방진 가락 치며 치배들이 달팽이 바깥으로 잠깐 펼쳤다 다시 모임 (꽃이 폈다 오므라드는 모습)"
+    },
+    {
+      "name": "옆뛰기 변형",
+      "description": "보통 마지막 달팽이진에서. 상쇠가 옆걸음으로 뛰면 별도 신호 없이 다 따라함"
+    }
+  ],
+  "implementation_status": "documented_only",
+  "notes": "동적으로 말리고 풀리는 진형이므로 정적 좌표는 시점 1(완전히 말린 상태) 기준의 참고용. 도구 구현 시 알고리즘 기반 생성 필요.",
+  "nodes": [
+    {
+      "id": 1,
+      "instrument": "꽹과리",
+      "role": "상쇠",
+      "x": 400,
+      "y": 280,
+      "heading": -3.142
+    },
+    {
+      "id": 2,
+      "instrument": "꽹과리",
+      "role": "부쇠",
+      "x": 390.9,
+      "y": 280.1,
+      "heading": -3.57
+    },
+    {
+      "id": 3,
+      "instrument": "꽹과리",
+      "role": "3번 꽹과리",
+      "x": 382,
+      "y": 284.4,
+      "heading": -3.998
+    },
+    {
+      "id": 4,
+      "instrument": "꽹과리",
+      "role": "4번 꽹과리",
+      "x": 375.3,
+      "y": 292.8,
+      "heading": -4.427
+    },
+    {
+      "id": 5,
+      "instrument": "꽹과리",
+      "role": "막쇠",
+      "x": 372.6,
+      "y": 303.9,
+      "heading": -4.855
+    },
+    {
+      "id": 6,
+      "instrument": "징",
+      "role": "1번 징",
+      "x": 375.1,
+      "y": 316,
+      "heading": -5.284
+    },
+    {
+      "id": 7,
+      "instrument": "징",
+      "role": "2번 징",
+      "x": 383,
+      "y": 326.5,
+      "heading": -5.712
+    },
+    {
+      "id": 8,
+      "instrument": "징",
+      "role": "3번 징",
+      "x": 395.3,
+      "y": 333,
+      "heading": -6.14
+    },
+    {
+      "id": 9,
+      "instrument": "장구",
+      "role": "상장구",
+      "x": 409.9,
+      "y": 333.8,
+      "heading": -6.569
+    },
+    {
+      "id": 10,
+      "instrument": "장구",
+      "role": "2번 장구",
+      "x": 424.3,
+      "y": 328.1,
+      "heading": -6.997
+    },
+    {
+      "id": 11,
+      "instrument": "장구",
+      "role": "3번 장구",
+      "x": 435.6,
+      "y": 316.2,
+      "heading": -7.426
+    },
+    {
+      "id": 12,
+      "instrument": "장구",
+      "role": "4번 장구",
+      "x": 441,
+      "y": 300,
+      "heading": -7.854
+    },
+    {
+      "id": 13,
+      "instrument": "장구",
+      "role": "말장구",
+      "x": 439,
+      "y": 282.2,
+      "heading": -8.282
+    },
+    {
+      "id": 14,
+      "instrument": "북",
+      "role": "1번 북",
+      "x": 429.3,
+      "y": 266.1,
+      "heading": -8.711
+    },
+    {
+      "id": 15,
+      "instrument": "북",
+      "role": "2번 북",
+      "x": 413.2,
+      "y": 255.2,
+      "heading": -9.139
+    },
+    {
+      "id": 16,
+      "instrument": "북",
+      "role": "3번 북",
+      "x": 393.1,
+      "y": 251.9,
+      "heading": -9.568
+    },
+    {
+      "id": 17,
+      "instrument": "북",
+      "role": "4번 북",
+      "x": 372.7,
+      "y": 257.5,
+      "heading": -9.996
+    },
+    {
+      "id": 18,
+      "instrument": "북",
+      "role": "5번 북",
+      "x": 355.9,
+      "y": 271.6,
+      "heading": -10.424
+    },
+    {
+      "id": 19,
+      "instrument": "소고",
+      "role": "1번 소고",
+      "x": 346.2,
+      "y": 292.3,
+      "heading": -10.853
+    },
+    {
+      "id": 20,
+      "instrument": "소고",
+      "role": "2번 소고",
+      "x": 346,
+      "y": 315.9,
+      "heading": -11.281
+    },
+    {
+      "id": 21,
+      "instrument": "소고",
+      "role": "3번 소고",
+      "x": 356,
+      "y": 338.1,
+      "heading": -11.71
+    },
+    {
+      "id": 22,
+      "instrument": "소고",
+      "role": "4번 소고",
+      "x": 375,
+      "y": 354.7,
+      "heading": -12.138
+    },
+    {
+      "id": 23,
+      "instrument": "소고",
+      "role": "말법고",
+      "x": 400,
+      "y": 362,
+      "heading": -12.566
+    }
+  ]
+}

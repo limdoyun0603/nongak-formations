@@ -1,0 +1,227 @@
+{
+  "name": "11자진",
+  "name_en": "Shibil-jajin (Two-line facing formation)",
+  "name_romanized": "Shibiljajin",
+  "description": "치배들이 두 줄로 평행하게 늘어서서 서로 마주보는 진. 한자 \"十一\"의 두 세로획 모양.",
+  "description_en": "Performers arranged in two parallel lines facing each other, resembling the two vertical strokes of the character 十一.",
+  "source": "고창농악 2마당 (일광놀이, 쇠놀이, 쇠장구놀이), 3마당 (삼채 후 두 줄)",
+  "parameters": {
+    "person_count": 23,
+    "line_gap_px": "variable (맨 앞 사람이 자율 결정)",
+    "same_line_spacing_px": 38,
+    "stage_size": {
+      "w": 800,
+      "h": 600
+    },
+    "person_distribution": "맨 앞 사람이 있는 줄이 맨 뒷 사람이 있는 줄보다 한 명 적음 (23명 → 11+12)"
+  },
+  "rules": [
+    "두 줄이 서로 마주봄 (heading이 서로를 향함)",
+    "두 줄 사이 간격은 맨 앞 사람이 자율 결정, 나머지가 그에 맞춤",
+    "맨 앞 사람이 있는 줄이 맨 뒷 사람이 있는 줄보다 한 명 적음",
+    "3마당에서 두 줄로 갈라질 때 상쇠는 항상 왼쪽으로 먼저 → 관객 시점 상쇠 줄=왼쪽"
+  ],
+  "variants": [
+    {
+      "name": "생성 방법 1: 원진에서 접기 (O → U)",
+      "description": "원진의 head와 tail이 마주보고 멈춰 11자진의 맨 앞이 됨. 나머지가 뒤로 U자처럼 접힘. 원의 앞쪽 11명이 한 줄, 뒤쪽 12명이 다른 줄."
+    },
+    {
+      "name": "생성 방법 2: 일자진에서 가르기 (— → m)",
+      "description": "일자진에서 지퍼처럼 좌우 번갈아 한 명씩 분기. 가르는 동시에 뒤로 돔 → m자 형태. 분기점은 공간상 고정 (모두 같은 지점에서 갈라짐). 마지막 한 명까지 분기점에 도달해 갈라지면 완성."
+    },
+    {
+      "name": "쇠장구놀이 변종",
+      "description": "한 줄은 꽹과리치배 줄, 한 줄은 장구치배 줄. 막쇠와 상장구가 마주봄."
+    }
+  ],
+  "implementation_status": "partially_implemented",
+  "notes": "도구에는 아직 미구현. 좌표 데이터는 생성 방법 1 기준의 참고용 정적 스냅숏.",
+  "nodes": [
+    {
+      "id": 1,
+      "instrument": "꽹과리",
+      "role": "상쇠",
+      "x": 340,
+      "y": 91,
+      "heading": 0
+    },
+    {
+      "id": 2,
+      "instrument": "꽹과리",
+      "role": "부쇠",
+      "x": 340,
+      "y": 129,
+      "heading": 0
+    },
+    {
+      "id": 3,
+      "instrument": "꽹과리",
+      "role": "3번 꽹과리",
+      "x": 340,
+      "y": 167,
+      "heading": 0
+    },
+    {
+      "id": 4,
+      "instrument": "꽹과리",
+      "role": "4번 꽹과리",
+      "x": 340,
+      "y": 205,
+      "heading": 0
+    },
+    {
+      "id": 5,
+      "instrument": "꽹과리",
+      "role": "막쇠",
+      "x": 340,
+      "y": 243,
+      "heading": 0
+    },
+    {
+      "id": 6,
+      "instrument": "징",
+      "role": "1번 징",
+      "x": 340,
+      "y": 281,
+      "heading": 0
+    },
+    {
+      "id": 7,
+      "instrument": "징",
+      "role": "2번 징",
+      "x": 340,
+      "y": 319,
+      "heading": 0
+    },
+    {
+      "id": 8,
+      "instrument": "징",
+      "role": "3번 징",
+      "x": 340,
+      "y": 357,
+      "heading": 0
+    },
+    {
+      "id": 9,
+      "instrument": "장구",
+      "role": "상장구",
+      "x": 340,
+      "y": 395,
+      "heading": 0
+    },
+    {
+      "id": 10,
+      "instrument": "장구",
+      "role": "2번 장구",
+      "x": 340,
+      "y": 433,
+      "heading": 0
+    },
+    {
+      "id": 11,
+      "instrument": "장구",
+      "role": "3번 장구",
+      "x": 340,
+      "y": 471,
+      "heading": 0
+    },
+    {
+      "id": 12,
+      "instrument": "장구",
+      "role": "4번 장구",
+      "x": 460,
+      "y": 91,
+      "heading": 3.142
+    },
+    {
+      "id": 13,
+      "instrument": "장구",
+      "role": "말장구",
+      "x": 460,
+      "y": 129,
+      "heading": 3.142
+    },
+    {
+      "id": 14,
+      "instrument": "북",
+      "role": "1번 북",
+      "x": 460,
+      "y": 167,
+      "heading": 3.142
+    },
+    {
+      "id": 15,
+      "instrument": "북",
+      "role": "2번 북",
+      "x": 460,
+      "y": 205,
+      "heading": 3.142
+    },
+    {
+      "id": 16,
+      "instrument": "북",
+      "role": "3번 북",
+      "x": 460,
+      "y": 243,
+      "heading": 3.142
+    },
+    {
+      "id": 17,
+      "instrument": "북",
+      "role": "4번 북",
+      "x": 460,
+      "y": 281,
+      "heading": 3.142
+    },
+    {
+      "id": 18,
+      "instrument": "북",
+      "role": "5번 북",
+      "x": 460,
+      "y": 319,
+      "heading": 3.142
+    },
+    {
+      "id": 19,
+      "instrument": "소고",
+      "role": "1번 소고",
+      "x": 460,
+      "y": 357,
+      "heading": 3.142
+    },
+    {
+      "id": 20,
+      "instrument": "소고",
+      "role": "2번 소고",
+      "x": 460,
+      "y": 395,
+      "heading": 3.142
+    },
+    {
+      "id": 21,
+      "instrument": "소고",
+      "role": "3번 소고",
+      "x": 460,
+      "y": 433,
+      "heading": 3.142
+    },
+    {
+      "id": 22,
+      "instrument": "소고",
+      "role": "4번 소고",
+      "x": 460,
+      "y": 471,
+      "heading": 3.142
+    },
+    {
+      "id": 23,
+      "instrument": "소고",
+      "role": "말법고",
+      "x": 460,
+      "y": 509,
+      "heading": 3.142
+    }
+  ],
+  "implementation_notes": "방법 1(원진에서 접기)의 정적 스냅숏만 구현됨 (2026-06). 상단 바 ⁣‖ 11자진 버튼. 방법 2(일자진에서 가르기)와 원진↔11자진 애니메이션 전이는 미구현."
+}

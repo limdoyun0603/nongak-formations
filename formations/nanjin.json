@@ -1,0 +1,152 @@
+{
+  "name": "난진",
+  "name_en": "Nanjin (Loose formation)",
+  "name_romanized": "Nanjin",
+  "description": "일정한 형태가 없는 진형. 어름굿(워밍업) 시 사용. 매번 약간씩 다른 모양.",
+  "description_en": "A loose, non-fixed formation used during the warm-up. The exact arrangement varies each time.",
+  "source": "고창농악 어름굿 (모든 마당의 워밍업)",
+  "parameters": {
+    "person_count": 23,
+    "cluster_radius_ratio": 0.3,
+    "same_instrument_min_distance_px": 70,
+    "any_node_min_distance_px": 36,
+    "placement_attempts_per_node": 50
+  },
+  "rules": [
+    "상쇠는 항상 무대 중앙에 배치",
+    "나머지 치배들은 상쇠 주위 클러스터 반경 내에 무작위 배치",
+    "같은 악기끼리는 인접하지 않게 분산 (점수 기반 배치)",
+    "모든 노드 간 최소 거리 유지 (물리적 겹침 방지)",
+    "매번 약간 다른 모양으로 배치 (난진의 본질)"
+  ],
+  "algorithm": {
+    "type": "stochastic_placement",
+    "steps": [
+      "1. 상쇠(id=1)를 무대 중앙 (cx, cy)에 고정",
+      "2. 색상별로 그룹화한 뒤 라운드 로빈 순서로 나머지 노드를 배치",
+      "3. 각 노드마다 50회 시도하여 점수가 가장 높은 위치 선택",
+      "4. 점수 = (같은 악기와의 최소 거리) - (상쇠로부터의 거리 × 0.3) - 패널티",
+      "5. 시선(heading)은 대체로 상쇠를 향하되 약간의 무작위성 추가"
+    ]
+  },
+  "variants": [],
+  "implementation_status": "implemented",
+  "nodes": null,
+  "node_roster": [
+    {
+      "id": 1,
+      "instrument": "꽹과리",
+      "role": "상쇠"
+    },
+    {
+      "id": 2,
+      "instrument": "꽹과리",
+      "role": "부쇠"
+    },
+    {
+      "id": 3,
+      "instrument": "꽹과리",
+      "role": "3번 꽹과리"
+    },
+    {
+      "id": 4,
+      "instrument": "꽹과리",
+      "role": "4번 꽹과리"
+    },
+    {
+      "id": 5,
+      "instrument": "꽹과리",
+      "role": "막쇠"
+    },
+    {
+      "id": 6,
+      "instrument": "징",
+      "role": "1번 징"
+    },
+    {
+      "id": 7,
+      "instrument": "징",
+      "role": "2번 징"
+    },
+    {
+      "id": 8,
+      "instrument": "징",
+      "role": "3번 징"
+    },
+    {
+      "id": 9,
+      "instrument": "장구",
+      "role": "상장구"
+    },
+    {
+      "id": 10,
+      "instrument": "장구",
+      "role": "2번 장구"
+    },
+    {
+      "id": 11,
+      "instrument": "장구",
+      "role": "3번 장구"
+    },
+    {
+      "id": 12,
+      "instrument": "장구",
+      "role": "4번 장구"
+    },
+    {
+      "id": 13,
+      "instrument": "장구",
+      "role": "말장구"
+    },
+    {
+      "id": 14,
+      "instrument": "북",
+      "role": "1번 북"
+    },
+    {
+      "id": 15,
+      "instrument": "북",
+      "role": "2번 북"
+    },
+    {
+      "id": 16,
+      "instrument": "북",
+      "role": "3번 북"
+    },
+    {
+      "id": 17,
+      "instrument": "북",
+      "role": "4번 북"
+    },
+    {
+      "id": 18,
+      "instrument": "북",
+      "role": "5번 북"
+    },
+    {
+      "id": 19,
+      "instrument": "소고",
+      "role": "1번 소고"
+    },
+    {
+      "id": 20,
+      "instrument": "소고",
+      "role": "2번 소고"
+    },
+    {
+      "id": 21,
+      "instrument": "소고",
+      "role": "3번 소고"
+    },
+    {
+      "id": 22,
+      "instrument": "소고",
+      "role": "4번 소고"
+    },
+    {
+      "id": 23,
+      "instrument": "소고",
+      "role": "말법고"
+    }
+  ]
+}

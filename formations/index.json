@@ -1,0 +1,49 @@
+{
+  "name": "Nongak Formations Dictionary",
+  "description": "고창농악 진형 사전 — 각 진형의 정의, 규칙, 좌표 데이터를 모은 모음",
+  "count": 6,
+  "formations": [
+    {
+      "file": "wonjin.json",
+      "name": "원진",
+      "name_en": "Wonjin",
+      "source": "고창농악 전체 마당의 기본 진형",
+      "status": "implemented"
+    },
+    {
+      "file": "taegukjin.json",
+      "name": "태극진",
+      "name_en": "Taegukjin (Yin-Yang S-curve formation)",
+      "source": "고창농악 1마당 (느린벙어리삼채/된벙어리삼채), 2마당 (쇠장구놀이 시작), 3마당 (벙어리일채 시작)",
+      "status": "implemented"
+    },
+    {
+      "file": "nanjin.json",
+      "name": "난진",
+      "name_en": "Nanjin (Loose formation)",
+      "source": "고창농악 어름굿 (모든 마당의 워밍업)",
+      "status": "implemented"
+    },
+    {
+      "file": "shibiljajin.json",
+      "name": "11자진",
+      "name_en": "Shibil-jajin (Two-line facing formation)",
+      "source": "고창농악 2마당 (일광놀이, 쇠놀이, 쇠장구놀이), 3마당 (삼채 후 두 줄)",
+      "status": "partially_implemented"
+    },
+    {
+      "file": "dalpaengyijin.json",
+      "name": "달팽이진",
+      "name_en": "Dalpaengyi-jin (Snail formation / Spiral)",
+      "source": "고창농악 2마당 (진오방진)",
+      "status": "documented_only"
+    },
+    {
+      "file": "jangsajin.json",
+      "name": "장사진",
+      "name_en": "Jangsajin (Long snake formation)",
+      "source": "고창농악 3마당 (콩꺾자 이후 삼채에서 사용)",
+      "status": "inherent"
+    }
+  ]
+}

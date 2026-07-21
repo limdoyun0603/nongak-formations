@@ -1,0 +1,225 @@
+{
+  "name": "태극진",
+  "name_en": "Taegukjin (Yin-Yang S-curve formation)",
+  "name_romanized": "Taegukjin",
+  "description": "치배들이 S자 곡선으로 늘어선 진형. 태극 문양의 두 구비를 닮음.",
+  "description_en": "Performers arranged along an S-curve resembling the Korean taegeuk (yin-yang) symbol.",
+  "source": "고창농악 1마당 (느린벙어리삼채/된벙어리삼채), 2마당 (쇠장구놀이 시작), 3마당 (벙어리일채 시작)",
+  "parameters": {
+    "person_count": 23,
+    "enclosing_circle_radius_px": 216,
+    "s_curve_half_radius_px": 108,
+    "stage_size": {
+      "w": 800,
+      "h": 600
+    },
+    "center": {
+      "x": 400,
+      "y": 300
+    },
+    "entry_point": "6시 방향 (원의 아래)",
+    "exit_point": "12시 방향 (원의 위)",
+    "lower_bulge": "왼쪽 (서쪽)",
+    "upper_bulge": "오른쪽 (동쪽)"
+  },
+  "rules": [
+    "핵심 기하: 시계방향 원진(12시 출발) → 6시 진입 → S자 하반(왼쪽 부풀음, 중심 통과) → S자 상반(오른쪽 부풀음, 12시 도달) → 반시계방향 원진으로 합류",
+    "한 번의 태극진은 회전 방향을 뒤집는다",
+    "같은 방향 원진으로 돌아오려면 짝수 번 반복하거나 한 번은 바깥쪽 U턴으로 방향 전환",
+    "초기 원진 방향(시계/반시계)은 무관, 중요한 건 태극진 전후 두 원진의 상대적 방향이 반대라는 것",
+    "곡률 연속성: Pre 원진 끝에서 진행 방향이 서쪽이면 S 하반은 왼쪽으로 부풀어야 자연스럽게 이어짐"
+  ],
+  "variants": [
+    {
+      "name": "연속 태극진",
+      "description": "느린벙어리삼채와 된벙어리삼채에서 여러 번 반복. 짝수 번 반복하면 원진 방향이 보존됨"
+    }
+  ],
+  "implementation_status": "implemented",
+  "nodes": [
+    {
+      "id": 1,
+      "instrument": "꽹과리",
+      "role": "상쇠",
+      "x": 400,
+      "y": 516,
+      "heading": -3.126
+    },
+    {
+      "id": 2,
+      "instrument": "꽹과리",
+      "role": "부쇠",
+      "x": 369.9,
+      "y": 511.7,
+      "heading": -2.843
+    },
+    {
+      "id": 3,
+      "instrument": "꽹과리",
+      "role": "3번 꽹과리",
+      "x": 342.1,
+      "y": 499.2,
+      "heading": -2.56
+    },
+    {
+      "id": 4,
+      "instrument": "꽹과리",
+      "role": "4번 꽹과리",
+      "x": 319,
+      "y": 479.4,
+      "heading": -2.278
+    },
+    {
+      "id": 5,
+      "instrument": "꽹과리",
+      "role": "막쇠",
+      "x": 302.3,
+      "y": 454,
+      "heading": -1.995
+    },
+    {
+      "id": 6,
+      "instrument": "징",
+      "role": "1번 징",
+      "x": 293.3,
+      "y": 424.9,
+      "heading": -1.712
+    },
+    {
+      "id": 7,
+      "instrument": "징",
+      "role": "2번 징",
+      "x": 292.9,
+      "y": 394.5,
+      "heading": -1.429
+    },
+    {
+      "id": 8,
+      "instrument": "징",
+      "role": "3번 징",
+      "x": 300.9,
+      "y": 365.1,
+      "heading": -1.147
+    },
+    {
+      "id": 9,
+      "instrument": "장구",
+      "role": "상장구",
+      "x": 316.8,
+      "y": 339.2,
+      "heading": -0.864
+    },
+    {
+      "id": 10,
+      "instrument": "장구",
+      "role": "2번 장구",
+      "x": 339.3,
+      "y": 318.7,
+      "heading": -0.581
+    },
+    {
+      "id": 11,
+      "instrument": "장구",
+      "role": "3번 장구",
+      "x": 366.6,
+      "y": 305.3,
+      "heading": -0.298
+    },
+    {
+      "id": 12,
+      "instrument": "장구",
+      "role": "4번 장구",
+      "x": 400,
+      "y": 300,
+      "heading": -0.016
+    },
+    {
+      "id": 13,
+      "instrument": "장구",
+      "role": "말장구",
+      "x": 430.1,
+      "y": 295.7,
+      "heading": -0.298
+    },
+    {
+      "id": 14,
+      "instrument": "북",
+      "role": "1번 북",
+      "x": 457.9,
+      "y": 283.2,
+      "heading": -0.581
+    },
+    {
+      "id": 15,
+      "instrument": "북",
+      "role": "2번 북",
+      "x": 481,
+      "y": 263.4,
+      "heading": -0.864
+    },
+    {
+      "id": 16,
+      "instrument": "북",
+      "role": "3번 북",
+      "x": 497.7,
+      "y": 238,
+      "heading": -1.147
+    },
+    {
+      "id": 17,
+      "instrument": "북",
+      "role": "4번 북",
+      "x": 506.7,
+      "y": 208.9,
+      "heading": -1.429
+    },
+    {
+      "id": 18,
+      "instrument": "북",
+      "role": "5번 북",
+      "x": 507.1,
+      "y": 178.5,
+      "heading": -1.712
+    },
+    {
+      "id": 19,
+      "instrument": "소고",
+      "role": "1번 소고",
+      "x": 499.1,
+      "y": 149.1,
+      "heading": -1.995
+    },
+    {
+      "id": 20,
+      "instrument": "소고",
+      "role": "2번 소고",
+      "x": 483.2,
+      "y": 123.2,
+      "heading": -2.278
+    },
+    {
+      "id": 21,
+      "instrument": "소고",
+      "role": "3번 소고",
+      "x": 460.7,
+      "y": 102.7,
+      "heading": -2.56
+    },
+    {
+      "id": 22,
+      "instrument": "소고",
+      "role": "4번 소고",
+      "x": 433.4,
+      "y": 89.3,
+      "heading": -2.843
+    },
+    {
+      "id": 23,
+      "instrument": "소고",
+      "role": "말법고",
+      "x": 403.4,
+      "y": 84.1,
+      "heading": -3.126
+    }
+  ]
+}
