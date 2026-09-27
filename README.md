@@ -1,150 +1,101 @@
-# Nongak Formations — 한국 전통 대형의 디지털 기록 시스템
+# Nongak Formations
 
-> A digital recording system for Korean traditional percussion (Nongak / Pungmul) formations.
+고창농악 판굿의 진형(대형)과 진형 사이의 이동을 좌표로 기록하고 재생하는 브라우저 도구.
 
-**고창농악(Gochang Nongak)**의 진형(陣形, formations)과 그 사이의 움직임을 기록하고 재생하는 브라우저 도구. 원진(circle), 11자진(two-line), 난진(scatter) 같은 전통 대형과, 대형이 바뀌는 동작 자체를 디지털로 보존하고 가르치는 것을 목표로 한다.
+**Live demo** → https://limdoyun0603.github.io/nongak-formations/ (설치 없이 브라우저에서 열림)
 
-This is a browser-based tool for recording and replaying the formations of **Gochang Nongak**, a regional style of Korean traditional percussion ensemble performance — both the formations themselves (circle, two-line, scatter) and the movement between them.
-
-🔗 **Live demo:** [https://limdoyun0603.github.io/nongak-formations/](https://limdoyun0603.github.io/nongak-formations/)
-
----
-
-## 왜 만들었나 / Background
-
-전통 풍물패에서 진형을 가르치고 기억하는 도구는 대부분 종이 도해, 구전, 또는 영상이다. 영상은 한 시점만 보여주고, 종이 도해는 시간에 따른 변화를 담지 못한다. 일부 안무용 디지털 도구(예: arrangeUs)도 있지만 대부분 무용·치어리딩·드릴팀에 맞춰져 있어 풍물패의 핵심 원리인 **상쇠가 머리이고 나머지가 뱀처럼 따라간다**는 동작을 자연스럽게 표현하지 못한다.
-
-이 도구는 그 원리를 중심에 두고 만들었다: 상쇠(머리)를 끌면 체인 전체가 따라오고, 그 움직임을 그대로 녹화해 파일로 남길 수 있다.
-
-장기적으로는 자연어 입력("3분짜리 판굿, 점점 빨라지는 흐름")만으로 진형 시퀀스를 자동 생성하는 **AI 상쇠** 시스템의 기반이 되는 것을 목표로 한다.
-
-Traditional teaching relies on paper diagrams, oral transmission, or video — none of which capture both spatial structure and temporal change well. Existing choreography tools target dance and drill teams and don't model the core principle of Korean percussion ensembles: the lead percussionist (sangsoe) is the "head" of a chain, and everyone else follows snake-like.
+<!-- 도구 화면 캡처를 받으면 아래 줄의 주석을 풀 것 -->
+<!-- ![도구 화면](images/tool.png) -->
 
 ---
 
-## 주요 기능 / Features
+## 무엇을 하는가
 
-**편집**
-- **뱀 따라가기 (snake-follow)** — 체인의 머리나 꼬리만 끌면 나머지가 따라옴
-- **원진 자동 스냅** — 원 모양으로 돌리고 손을 떼면 균등한 원진으로 정리. 원진 상태에서는 궤도를 따라 끌면 회전, 바깥으로 크게 벗어나면 풀림
-- **11자진** — 버튼을 누른 뒤 화살표(두 점)로 방향을 지정하면, 상쇠 위치는 그대로 두고 두 줄로 접힘
-- **난진** — 같은 악기끼리 붙지 않게 흩어짐. 3명 이상 선택하면 선택한 사람만
-- **반연풍 / 180° / 앉기** — 제자리 회전, 방향 반전, 앉음·일어섬
-- **진 끊기·합치기** — 이웃한 두 사람을 골라 ✂ 분리하면 체인이 둘로 나뉘고(각 조각의 앞사람이 새 머리), 🔗 연결로 다시 합침
-- **연결 시 순서 정리** — 같은 악기 안에서만 위치 순으로 재배열. 악기 순서와 상치배·말치배·부쇠·말쇠 자리는 고정
+- 상쇠(맨 앞 사람)를 끌면 나머지가 한 줄로 뒤따라온다. 사람을 한 명씩 옮기지 않는다.
+- 원을 그리면 원진으로 정리되고, 버튼으로 난진·11자진·반연풍 등을 만든다.
+- 끌면서 녹화하면 움직임이 실제 속도로 기록되고, `.json` 파일로 저장해 다시 열고 재생할 수 있다.
 
-**선택**
-- 클릭: 한 사람 · 더블클릭: 선택하며 체인에서 떼어내기 · 우클릭: 메뉴(체인 전체 선택, 방향 돌리기, 떼기, 앉기)
-- Ctrl+클릭: 여러 명 · Ctrl+A: 전체 · 빈 곳 드래그: 영역 선택 · Esc: 해제
+## 왜 만들었나
 
-**기록**
-- **동작 녹화** — ⏺ 녹화 중 드래그한 움직임이 실제 속도 그대로 기록됨. 드래그 한 번이 동작 하나
-- **키프레임** — 특정 진형 상태를 저장하고 클릭으로 불러오기
-- **파일로 저장 / 열기** — 녹화한 동작, 키프레임, 현재 진형, 끊은 체인을 `.json` 파일 하나로 저장하고 다시 열기
-- **재생 / 가속 재생**, 좌표 복사
+2025년 연세대 중앙 풍물패 '떼' 정기공연을 연출하며 판굿 진형 13종을 새로 짰다. 기록에는 안무 앱 ArrangeUs를 썼는데, 무용·치어리딩용이라 사람 위치를 한 명씩 지정해야 했다. 진형이 바뀌는 과정을 보여주려면 장면마다 슬라이드를 새로 만들어야 했고, 슬라이드는 수백 장이 됐다. 동선 하나를 고치면 뒤따르는 슬라이드를 처음부터 다시 그렸다.
 
-**가락** — 마당별 가락과 BPM 사전
+![ArrangeUs로 만든 2025년 공연 대형도](images/arrangeus-2025.png)
 
-**23명 기본 편성** — 꽹과리 2(상쇠·부쇠), 징 2, 장구 6, 북 4, 소고 6, 잡색 3. 노드 수는 조절 가능
+*2025년 공연 기획서에 실은 대형도 40장. 한 장마다 사람 위치를 하나씩 찍었다.*
 
----
+풍물의 진형은 개별 위치의 나열이 아니다. 상쇠가 길을 내고 나머지가 그 궤적을 따라간다. 이 원리를 편집 방식으로 옮기면 작업량이 줄어든다고 보고 만들었다.
 
-## 사용법 / Usage
+## 데이터
 
-브라우저에서 [index.html](./index.html)을 열면 바로 사용 가능. 설치나 서버가 필요 없다.
+`formations/`에 진형 6종을 JSON으로 정리했다. 각 파일에는 이름, 출처(어느 마당의 어느 가락에서 쓰는지), 기하 파라미터, 규칙, 변형, 구현 상태, 좌표가 들어 있다.
 
-1. **동선 만들기** — 1번(상쇠) 또는 마지막 사람을 드래그. 원을 그리면 원진으로 정리됨
-2. **진형 버튼** — 진풀이 탭의 ⁂ 난진, ‖ 11자진, ↻ 반연풍 등
+좌표만이 아니라 규칙도 기록한다. 예를 들어 "한 번의 태극진은 원진의 회전 방향을 뒤집는다"는 규칙은 좌표에 드러나지 않지만 다음 진형을 결정한다. 난진(매번 달라야 함)과 장사진(상쇠의 즉흥 동선)은 좌표를 고정할 수 없어 배치 규칙만 적었다.
+
+판굿 구조, 마당별 진형과 가락, 용어는 [OVERVIEW.md](./OVERVIEW.md)에 있다.
+
+도구에서 💾 파일로 저장하면 녹화한 동작, 키프레임, 현재 진형, 끊어 둔 체인이 `.json` 하나로 저장된다. 한 사람의 상태는 `[x, y, 방향(라디안), 떨어짐(0/1), 앉음(0/1)]`로 기록한다.
+
+## 구현 상태
+
+| 진형 | 도구에서 | 출처 |
+|------|------|------|
+| 원진 | ✅ 원을 그리면 자동 정리 | 모든 마당의 기본 |
+| 11자진 | ✅ 버튼 + 방향 지정 | 2마당, 3마당 |
+| 난진 | ✅ 버튼 | 어름굿 |
+| 장사진 | ✅ 기본 동작(뱀 따라가기)으로 표현 | 입장굿, 3마당 |
+| 태극진 | 🔧 알고리즘만 코드에 있음 (버튼 없음) | 1·2·3마당 |
+| 달팽이진 | 📝 문서화만 | 2마당 |
+
+## 사용법
+
+1. **동선** — 1번(상쇠)이나 마지막 사람을 드래그. 원을 그리면 원진으로 정리됨
+2. **진형** — 진풀이 탭의 ⁂ 난진, ‖ 11자진, ↻ 반연풍 등
 3. **녹화** — 애니메이션 탭의 ⏺ 녹화를 누르고 드래그. 다시 누르면 중지
-4. **저장** — 오른쪽 아래 💾 파일로 저장. 나중에 📂 파일 열기로 이어서 작업
-5. **재생** — ▶ 재생 (녹화한 동작이 있으면 동작을, 없으면 키프레임을 재생)
+4. **저장** — 💾 파일로 저장. 📂 파일 열기로 이어서 작업
+5. **재생** — ▶ 재생
 
-도메인 지식(판굿 구조, 마당별 진형·가락, 용어)은 [OVERVIEW.md](./OVERVIEW.md) 참조.
+## 만든 방식
 
----
+둘 다 개발자가 아니다. 코드는 배우진이 Claude(Anthropic)와 대화하며 작성했고, 임도윤이 진형 규칙을 정의하고 결과를 검수했다.
 
-## 진형 현황 / Formations
+처음에는 진형을 말로 설명했지만 원하는 배치가 나오지 않았다. 그래서 도구 안에서 진형을 직접 그리고, 그때 찍힌 좌표를 Claude에게 다시 넘기는 방식으로 바꿨다. 도구가 기록 수단이면서 요구사항을 전달하는 형식이 됐다.
 
-| 진형 | 영문 | 도구 | 출처 |
-|------|------|------|------|
-| 원진 | Wonjin | ✅ 자동 스냅 | 모든 마당의 기본 |
-| 11자진 | Shibiljajin | ✅ 방향 지정 | 2마당, 3마당 |
-| 난진 | Nanjin | ✅ 버튼 | 어름굿 |
-| 장사진 | Jangsajin | ✅ 뱀 따라가기로 표현 | 3마당, 입장굿 |
-| 태극진 | Taegukjin | 🔧 알고리즘만 보존 (버튼 없음) | 1·2·3마당 |
-| 달팽이진 | Dalpaengyijin | 📝 명문화만 | 2마당 |
+작업이 여러 대화에 걸치면서 앞에서 정한 것이 잊히는 문제가 생겨, [OVERVIEW.md](./OVERVIEW.md)를 새 대화가 프로젝트를 이어받기 위한 인계 문서로 만들었다. 용어 정의, 설계 원칙, 직접 그린 프레임과 Claude가 계산한 프레임이 충돌할 때의 우선순위, 하지 말아야 할 것을 적어 둔다.
 
-각 진형의 정의는 [formations/](./formations/) 폴더의 JSON 파일 참조.
+2026년 2월에 구상하고 3월부터 작업했다. 레포는 7월에 만들었기 때문에 그 이전 작업은 커밋 이력에 없다.
 
----
+## 설계 원칙
 
-## 기록 파일 형식 / Record File
+- **직접 그린 것이 우선** — 사람이 만든 프레임을 자동 계산으로 덮어쓰지 않는다. 수학적으로 고른 곡선과 실제 연습에서 나온 동선은 다르다.
+- **태극진은 버튼으로 만들지 않는다** — 고정된 모양이 아니라 상쇠의 S자 궤적을 따라가며 나타나는 진형이기 때문이다.
+- **머신러닝은 쓰지 않는다** — 학습할 진형 데이터가 부족하고, 무엇을 예측할지 아직 정의되지 않았다.
+- **단일 HTML 파일, 저장은 파일로만** — 풍물패 부원이 설치 없이 열 수 있어야 했다. 브라우저 저장소는 쓰지 않는다.
 
-💾 파일로 저장이 만드는 `.json` 파일 (`format: "gochang-nongak-record"`, `version: 1`):
+## 한계
 
-| 필드 | 내용 |
-|------|------|
-| `stage` | 저장 당시 캔버스 크기 (불러올 때 중심을 맞춤) |
-| `nodeCount`, `instruments` | 인원과 각자의 악기 |
-| `current` | 현재 진형 |
-| `clips[]` | 녹화한 동작. `frames`(프레임별 전원 상태)와 `times`(각 프레임의 경과 ms) |
-| `keyframes[]` | 저장한 키프레임 |
-| `brokenLinks` | 끊어 둔 체인 지점 |
-| `spacing` | 간격 설정 |
+- 태극진은 버튼이 없고, 달팽이진은 도구에 없다.
+- 11자진은 원진에서 접는 방식만 된다. 일자진에서 좌우로 갈라지는 방식은 아직 없다.
+- 진형 데이터는 고창농악 기준이다. 다른 지역 풍물에는 그대로 맞지 않는다.
+- 좌표는 화면 기준 상대값이다. 실제 공연장 치수로 바꾸는 기능은 없다.
+- 마당별 가락과 BPM 목록은 있지만, 녹화한 동작이 박자에 맞춰 기록되지는 않는다.
 
-한 사람의 상태는 `[x, y, 방향(라디안), 떨어짐(0/1), 앉음(0/1)]` 배열로 압축 저장한다.
+## 다음 작업
 
----
+- 판굿 한 마당을 처음부터 끝까지 이 도구로 기록해 보기 (입장굿 진행 중)
+- 박자 기록: 한 프레임을 반 장단으로 두는 방식 (설계만 해 둠)
+- "원진 → 태극진 → 원진" 같은 문장을 받아 기존 기능을 순서대로 실행하는 방식 (구상 단계). 공개된 정적 페이지라 API 키를 넣을 수 없어, 외부 AI 연동은 보류했다.
 
-## 폴더 구조 / Structure
+## 만든 사람
 
-```
-nongak-formations/
-├── README.md          (이 파일)
-├── index.html         (도구 본체, 단일 HTML 파일)
-├── OVERVIEW.md        (도메인 지식 + 기술 명세)
-├── LICENSE            (MIT)
-└── formations/        (진형 사전 — JSON)
-    ├── index.json
-    ├── wonjin.json
-    ├── taegukjin.json
-    ├── nanjin.json
-    ├── shibiljajin.json
-    ├── dalpaengyijin.json
-    └── jangsajin.json
-```
+- 임도윤 ([@limdoyun0603](https://github.com/limdoyun0603)) — 진형 규칙·데이터 정의, 설계 판단, 검수
+- 배우진 ([@nestor-pylos](https://github.com/nestor-pylos)) — 도구 구현
+
+코드 작성에 Claude를 사용했다. 커밋 작성자가 Claude로 표시되는 것은 이 때문이다. 두 사람은 연세대 중앙 풍물패 '떼'에서 함께 활동했다.
+
+## 라이선스
+
+MIT — [LICENSE](./LICENSE)
 
 ---
 
-## 향후 계획 / Roadmap
-
-**단기**
-- 2마당 삼채굿, 3마당, 4마당(구정놀이마당) 명문화
-- 빈 BPM 채우기 (일채, 반굿거리, 된굿거리, 된이채)
-- 실제 한 마당을 처음부터 끝까지 이 도구로 기보해 보기
-
-**중기**
-- 진형 시퀀스 DSL — `won_jin(direction: ccw, laps: 2) → taegeuk_jin() → ...` 처럼 판굿 전체를 코드로 표현
-- 가락과 동작의 박자 동기화
-
-**장기 — "AI 상쇠"**
-- 자연어 입력 → 진형 시퀀스 자동 생성 (LLM을 자연어→DSL 번역기로 활용)
-- 다른 지역 풍물(이리농악·진주삼천포농악 등)로 확장
-
----
-
-## 기술적 원칙 / Design Principles
-
-- **단일 HTML 파일** — 빌드 도구·프레임워크 없음. 브라우저로 열면 즉시 실행
-- **브라우저 저장소 안 씀** — 작업 내용은 메모리에만 있고, 남기려면 파일로 저장
-- **체인 단위 편집** — 사람을 일일이 옮기지 않고 머리를 끌어 움직임
-
----
-
-## 라이선스 / License
-
-MIT License — [LICENSE](./LICENSE) 참조.
-
-Copyright (c) 2026 limdoyun0603
-
-자유롭게 사용·수정·재배포 가능. 풍물패와 농악 교육에 기여하기를 바라며 만든 도구입니다.
+**English summary** — A browser tool for recording and replaying the formations of Gochang Nongak, a Korean traditional percussion performance. Drag the lead player and the rest follow as a chain; record movements and save them as JSON. Formation rules, not just coordinates, are documented in `formations/`. Built by two non-developers: @limdoyun0603 (domain rules, review) and @nestor-pylos (implementation, written with Claude).
