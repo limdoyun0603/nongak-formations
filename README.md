@@ -56,7 +56,7 @@
 
 ## 만든 방식
 
-둘 다 개발자가 아니다. 코드는 배우진이 Claude(Anthropic)와 대화하며 작성했고, 임도윤이 진형 규칙을 정의하고 결과를 검수했다.
+둘 다 개발자가 아니다. 임도윤이 공연 기록 문제를 가져와 작업을 제안하고 진행을 점검했고, 배우진이 Claude(Anthropic)와 대화하며 진형 규칙을 정리하고 코드를 작성했다.
 
 처음에는 진형을 말로 설명했지만 원하는 배치가 나오지 않았다. 그래서 도구 안에서 진형을 직접 그리고, 그때 찍힌 좌표를 Claude에게 다시 넘기는 방식으로 바꿨다. 도구가 기록 수단이면서 요구사항을 전달하는 형식이 됐다.
 
@@ -87,8 +87,8 @@
 
 ## 만든 사람
 
-- 임도윤 ([@limdoyun0603](https://github.com/limdoyun0603)) — 진형 규칙·데이터 정의, 설계 판단, 검수
-- 배우진 ([@nestor-pylos](https://github.com/nestor-pylos)) — 도구 구현
+- 임도윤 ([@limdoyun0603](https://github.com/limdoyun0603)) — 기획, 진행 점검
+- 배우진 ([@nestor-pylos](https://github.com/nestor-pylos)) — 진형 규칙 정리, 설계 판단, 도구 구현
 
 코드 작성에 Claude를 사용했다. 커밋 작성자가 Claude로 표시되는 것은 이 때문이다. 두 사람은 연세대 중앙 풍물패 '떼'에서 함께 활동했다.
 
@@ -98,4 +98,4 @@ MIT — [LICENSE](./LICENSE)
 
 ---
 
-**English summary** — A browser tool for recording and replaying the formations of Gochang Nongak, a Korean traditional percussion performance. Drag the lead player and the rest follow as a chain; record movements and save them as JSON. Formation rules, not just coordinates, are documented in `formations/`. Built by two non-developers: @limdoyun0603 (domain rules, review) and @nestor-pylos (implementation, written with Claude).
+**English summary** — A browser tool for recording and replaying the formations of Gochang Nongak, a Korean traditional percussion performance. Drag the lead player and the rest follow as a chain; record movements and save them as JSON. Formation rules, not just coordinates, are documented in `formations/`. Built by two non-developers: @limdoyun0603 (planning) and @nestor-pylos (formation rules, design, implementation with Claude).
