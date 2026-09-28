@@ -15,7 +15,7 @@
       "name": "태극진",
       "name_en": "Taegukjin (Yin-Yang S-curve formation)",
       "source": "고창농악 1마당 (느린벙어리삼채/된벙어리삼채), 2마당 (쇠장구놀이 시작), 3마당 (벙어리일채 시작)",
-      "status": "implemented"
+      "status": "algorithm_only"
     },
     {
       "file": "nanjin.json",

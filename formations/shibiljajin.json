@@ -36,7 +36,7 @@
     }
   ],
   "implementation_status": "partially_implemented",
-  "notes": "도구에는 아직 미구현. 좌표 데이터는 생성 방법 1 기준의 참고용 정적 스냅숏.",
+  "notes": "좌표 데이터는 생성 방법 1(원진에서 접기) 기준의 참고용 정적 스냅숏.",
   "nodes": [
     {
       "id": 1,
@@ -56,48 +56,48 @@
     },
     {
       "id": 3,
-      "instrument": "꽹과리",
-      "role": "3번 꽹과리",
+      "instrument": "징",
+      "role": "징1",
       "x": 340,
       "y": 167,
       "heading": 0
     },
     {
       "id": 4,
-      "instrument": "꽹과리",
-      "role": "4번 꽹과리",
+      "instrument": "징",
+      "role": "징2",
       "x": 340,
       "y": 205,
       "heading": 0
     },
     {
       "id": 5,
-      "instrument": "꽹과리",
-      "role": "막쇠",
+      "instrument": "장구",
+      "role": "장구1",
       "x": 340,
       "y": 243,
       "heading": 0
     },
     {
       "id": 6,
-      "instrument": "징",
-      "role": "1번 징",
+      "instrument": "장구",
+      "role": "장구2",
       "x": 340,
       "y": 281,
       "heading": 0
     },
     {
       "id": 7,
-      "instrument": "징",
-      "role": "2번 징",
+      "instrument": "장구",
+      "role": "장구3",
       "x": 340,
       "y": 319,
       "heading": 0
     },
     {
       "id": 8,
-      "instrument": "징",
-      "role": "3번 징",
+      "instrument": "장구",
+      "role": "장구4",
       "x": 340,
       "y": 357,
       "heading": 0
@@ -105,7 +105,7 @@
     {
       "id": 9,
       "instrument": "장구",
-      "role": "상장구",
+      "role": "장구5",
       "x": 340,
       "y": 395,
       "heading": 0
@@ -113,31 +113,31 @@
     {
       "id": 10,
       "instrument": "장구",
-      "role": "2번 장구",
+      "role": "장구6",
       "x": 340,
       "y": 433,
       "heading": 0
     },
     {
       "id": 11,
-      "instrument": "장구",
-      "role": "3번 장구",
+      "instrument": "북",
+      "role": "북1",
       "x": 340,
       "y": 471,
       "heading": 0
     },
     {
       "id": 12,
-      "instrument": "장구",
-      "role": "4번 장구",
+      "instrument": "북",
+      "role": "북2",
       "x": 460,
       "y": 91,
       "heading": 3.142
     },
     {
       "id": 13,
-      "instrument": "장구",
-      "role": "말장구",
+      "instrument": "북",
+      "role": "북3",
       "x": 460,
       "y": 129,
       "heading": 3.142
@@ -145,39 +145,39 @@
     {
       "id": 14,
       "instrument": "북",
-      "role": "1번 북",
+      "role": "북4",
       "x": 460,
       "y": 167,
       "heading": 3.142
     },
     {
       "id": 15,
-      "instrument": "북",
-      "role": "2번 북",
+      "instrument": "소고",
+      "role": "소고1",
       "x": 460,
       "y": 205,
       "heading": 3.142
     },
     {
       "id": 16,
-      "instrument": "북",
-      "role": "3번 북",
+      "instrument": "소고",
+      "role": "소고2",
       "x": 460,
       "y": 243,
       "heading": 3.142
     },
     {
       "id": 17,
-      "instrument": "북",
-      "role": "4번 북",
+      "instrument": "소고",
+      "role": "소고3",
       "x": 460,
       "y": 281,
       "heading": 3.142
     },
     {
       "id": 18,
-      "instrument": "북",
-      "role": "5번 북",
+      "instrument": "소고",
+      "role": "소고4",
       "x": 460,
       "y": 319,
       "heading": 3.142
@@ -185,7 +185,7 @@
     {
       "id": 19,
       "instrument": "소고",
-      "role": "1번 소고",
+      "role": "소고5",
       "x": 460,
       "y": 357,
       "heading": 3.142
@@ -193,35 +193,35 @@
     {
       "id": 20,
       "instrument": "소고",
-      "role": "2번 소고",
+      "role": "소고6",
       "x": 460,
       "y": 395,
       "heading": 3.142
     },
     {
       "id": 21,
-      "instrument": "소고",
-      "role": "3번 소고",
+      "instrument": "잡색",
+      "role": "잡색1",
       "x": 460,
       "y": 433,
       "heading": 3.142
     },
     {
       "id": 22,
-      "instrument": "소고",
-      "role": "4번 소고",
+      "instrument": "잡색",
+      "role": "잡색2",
       "x": 460,
       "y": 471,
       "heading": 3.142
     },
     {
       "id": 23,
-      "instrument": "소고",
-      "role": "말법고",
+      "instrument": "잡색",
+      "role": "잡색3",
       "x": 460,
       "y": 509,
       "heading": 3.142
     }
   ],
-  "implementation_notes": "방법 1(원진에서 접기)의 정적 스냅숏만 구현됨 (2026-06). 상단 바 ⁣‖ 11자진 버튼. 방법 2(일자진에서 가르기)와 원진↔11자진 애니메이션 전이는 미구현."
+  "implementation_notes": "‖ 11자진 버튼(진풀이 탭). 버튼을 누른 뒤 화면에 두 점을 찍어 화살표로 줄의 방향을 정하면, 1.6초 동안 현재 위치에서 두 줄로 이동함. 번호 순으로 앞 절반(23명이면 상쇠부터 11명)이 상쇠 줄, 나머지 12명이 막쇠 줄이 되고, 상쇠와 마지막 번호가 화살표 시작 쪽 앞끝에 나란히 섬(방법 1과 같은 배치). 상쇠 위치는 고정. 두 줄의 좌우는 체인이 감긴 방향(시계/반시계)으로 정해 교차를 막음. 줄 간격 140px, 줄 안 간격 38px 고정. 현재 진형이 원진인지 확인하지 않으며, 어떤 상태에서 눌러도 전원(체인에서 떨어진 사람 포함)을 같은 규칙으로 배치함. 미구현: 방법 2(일자진에서 가르기), '관객 시점 상쇠 줄=왼쪽' 규칙 강제, 11자진→원진 전이, 가세치기·미지기 등 줄 동작."
 }

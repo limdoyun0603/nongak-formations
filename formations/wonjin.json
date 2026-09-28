@@ -35,6 +35,7 @@
     }
   ],
   "implementation_status": "implemented",
+  "implementation_notes": "전용 버튼 없음. 체인 조각(5명 이상)의 머리나 꼬리를 끌어 원에 가깝게 만든 뒤 손을 떼면 자동으로 균등한 원으로 정리됨. 판정: 평균 반지름 40px 이상이고, 머리·꼬리 거리가 평균 반지름의 0.9배 미만(닫힌 원)이면 반지름 편차 32% 이하·최대 각도 간격 100° 이하, 아니면 편차 16% 이하·간격 75° 이하. 정리된 원은 궤도를 따라 끌면 통째로 회전하고, 궤도에서 40px 넘게 벗어나면 풀림. 변형(겹원진, 이중 원진)은 도구에 없음. 좌표 데이터는 참고용 정적 스냅숏.",
   "nodes": [
     {
       "id": 1,
@@ -54,48 +55,48 @@
     },
     {
       "id": 3,
-      "instrument": "꽹과리",
-      "role": "3번 꽹과리",
+      "instrument": "징",
+      "role": "징1",
       "x": 568.7,
       "y": 165.1,
       "heading": 0.896
     },
     {
       "id": 4,
-      "instrument": "꽹과리",
-      "role": "4번 꽹과리",
+      "instrument": "징",
+      "role": "징2",
       "x": 598.8,
       "y": 215.6,
       "heading": 1.17
     },
     {
       "id": 5,
-      "instrument": "꽹과리",
-      "role": "막쇠",
+      "instrument": "장구",
+      "role": "장구1",
       "x": 614.2,
       "y": 272.4,
       "heading": 1.443
     },
     {
       "id": 6,
-      "instrument": "징",
-      "role": "1번 징",
+      "instrument": "장구",
+      "role": "장구2",
       "x": 613.7,
       "y": 331.2,
       "heading": 1.716
     },
     {
       "id": 7,
-      "instrument": "징",
-      "role": "2번 징",
+      "instrument": "장구",
+      "role": "장구3",
       "x": 597.4,
       "y": 387.7,
       "heading": 1.989
     },
     {
       "id": 8,
-      "instrument": "징",
-      "role": "3번 징",
+      "instrument": "장구",
+      "role": "장구4",
       "x": 566.4,
       "y": 437.7,
       "heading": 2.262
@@ -103,7 +104,7 @@
     {
       "id": 9,
       "instrument": "장구",
-      "role": "상장구",
+      "role": "장구5",
       "x": 523.1,
       "y": 477.5,
       "heading": 2.535
@@ -111,31 +112,31 @@
     {
       "id": 10,
       "instrument": "장구",
-      "role": "2번 장구",
+      "role": "장구6",
       "x": 470.6,
       "y": 504.1,
       "heading": 2.809
     },
     {
       "id": 11,
-      "instrument": "장구",
-      "role": "3번 장구",
+      "instrument": "북",
+      "role": "북1",
       "x": 412.9,
       "y": 515.6,
       "heading": 3.082
     },
     {
       "id": 12,
-      "instrument": "장구",
-      "role": "4번 장구",
+      "instrument": "북",
+      "role": "북2",
       "x": 354.3,
       "y": 511.1,
       "heading": 3.355
     },
     {
       "id": 13,
-      "instrument": "장구",
-      "role": "말장구",
+      "instrument": "북",
+      "role": "북3",
       "x": 299,
       "y": 490.9,
       "heading": 3.628
@@ -143,39 +144,39 @@
     {
       "id": 14,
       "instrument": "북",
-      "role": "1번 북",
+      "role": "북4",
       "x": 251.2,
       "y": 456.6,
       "heading": 3.901
     },
     {
       "id": 15,
-      "instrument": "북",
-      "role": "2번 북",
+      "instrument": "소고",
+      "role": "소고1",
       "x": 214.5,
       "y": 410.7,
       "heading": 4.175
     },
     {
       "id": 16,
-      "instrument": "북",
-      "role": "3번 북",
+      "instrument": "소고",
+      "role": "소고2",
       "x": 191.5,
       "y": 356.5,
       "heading": 4.448
     },
     {
       "id": 17,
-      "instrument": "북",
-      "role": "4번 북",
+      "instrument": "소고",
+      "role": "소고3",
       "x": 184,
       "y": 298.2,
       "heading": 4.721
     },
     {
       "id": 18,
-      "instrument": "북",
-      "role": "5번 북",
+      "instrument": "소고",
+      "role": "소고4",
       "x": 192.5,
       "y": 240,
       "heading": 4.994
@@ -183,7 +184,7 @@
     {
       "id": 19,
       "instrument": "소고",
-      "role": "1번 소고",
+      "role": "소고5",
       "x": 216.4,
       "y": 186.2,
       "heading": 5.267
@@ -191,31 +192,31 @@
     {
       "id": 20,
       "instrument": "소고",
-      "role": "2번 소고",
+      "role": "소고6",
       "x": 253.9,
       "y": 140.9,
       "heading": 5.54
     },
     {
       "id": 21,
-      "instrument": "소고",
-      "role": "3번 소고",
+      "instrument": "잡색",
+      "role": "잡색1",
       "x": 302.3,
       "y": 107.4,
       "heading": 5.814
     },
     {
       "id": 22,
-      "instrument": "소고",
-      "role": "4번 소고",
+      "instrument": "잡색",
+      "role": "잡색2",
       "x": 357.9,
       "y": 88.2,
       "heading": 6.087
     },
     {
       "id": 23,
-      "instrument": "소고",
-      "role": "말법고",
+      "instrument": "잡색",
+      "role": "잡색3",
       "x": 416.6,
       "y": 84.6,
       "heading": 6.36

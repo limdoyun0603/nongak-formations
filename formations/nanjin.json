@@ -7,9 +7,9 @@
   "source": "고창농악 어름굿 (모든 마당의 워밍업)",
   "parameters": {
     "person_count": 23,
-    "cluster_radius_ratio": 0.3,
-    "same_instrument_min_distance_px": 70,
-    "any_node_min_distance_px": 36,
+    "cluster_radius_ratio": 0.24,
+    "same_instrument_min_distance_px": 58,
+    "any_node_min_distance_px": 40,
     "placement_attempts_per_node": 50
   },
   "rules": [
@@ -31,6 +31,7 @@
   },
   "variants": [],
   "implementation_status": "implemented",
+  "implementation_notes": "⁂ 난진 버튼(진풀이 탭). 3명 이상 선택한 상태에서 누르면 선택한 사람만 그들의 무게중심 기준으로 흩어지고, 선택한 사람 중 번호가 가장 작은 사람이 중심에 섬. 상쇠 또는 중심과의 최소 거리 40px. 도구는 시작할 때 난진을 한 번 배치해 키프레임 '난진 (어름굿)'으로 저장해 둠.",
   "nodes": null,
   "node_roster": [
     {
@@ -45,108 +46,108 @@
     },
     {
       "id": 3,
-      "instrument": "꽹과리",
-      "role": "3번 꽹과리"
+      "instrument": "징",
+      "role": "징1"
     },
     {
       "id": 4,
-      "instrument": "꽹과리",
-      "role": "4번 꽹과리"
+      "instrument": "징",
+      "role": "징2"
     },
     {
       "id": 5,
-      "instrument": "꽹과리",
-      "role": "막쇠"
+      "instrument": "장구",
+      "role": "장구1"
     },
     {
       "id": 6,
-      "instrument": "징",
-      "role": "1번 징"
+      "instrument": "장구",
+      "role": "장구2"
     },
     {
       "id": 7,
-      "instrument": "징",
-      "role": "2번 징"
+      "instrument": "장구",
+      "role": "장구3"
     },
     {
       "id": 8,
-      "instrument": "징",
-      "role": "3번 징"
+      "instrument": "장구",
+      "role": "장구4"
     },
     {
       "id": 9,
       "instrument": "장구",
-      "role": "상장구"
+      "role": "장구5"
     },
     {
       "id": 10,
       "instrument": "장구",
-      "role": "2번 장구"
+      "role": "장구6"
     },
     {
       "id": 11,
-      "instrument": "장구",
-      "role": "3번 장구"
+      "instrument": "북",
+      "role": "북1"
     },
     {
       "id": 12,
-      "instrument": "장구",
-      "role": "4번 장구"
+      "instrument": "북",
+      "role": "북2"
     },
     {
       "id": 13,
-      "instrument": "장구",
-      "role": "말장구"
+      "instrument": "북",
+      "role": "북3"
     },
     {
       "id": 14,
       "instrument": "북",
-      "role": "1번 북"
+      "role": "북4"
     },
     {
       "id": 15,
-      "instrument": "북",
-      "role": "2번 북"
+      "instrument": "소고",
+      "role": "소고1"
     },
     {
       "id": 16,
-      "instrument": "북",
-      "role": "3번 북"
+      "instrument": "소고",
+      "role": "소고2"
     },
     {
       "id": 17,
-      "instrument": "북",
-      "role": "4번 북"
+      "instrument": "소고",
+      "role": "소고3"
     },
     {
       "id": 18,
-      "instrument": "북",
-      "role": "5번 북"
+      "instrument": "소고",
+      "role": "소고4"
     },
     {
       "id": 19,
       "instrument": "소고",
-      "role": "1번 소고"
+      "role": "소고5"
     },
     {
       "id": 20,
       "instrument": "소고",
-      "role": "2번 소고"
+      "role": "소고6"
     },
     {
       "id": 21,
-      "instrument": "소고",
-      "role": "3번 소고"
+      "instrument": "잡색",
+      "role": "잡색1"
     },
     {
       "id": 22,
-      "instrument": "소고",
-      "role": "4번 소고"
+      "instrument": "잡색",
+      "role": "잡색2"
     },
     {
       "id": 23,
-      "instrument": "소고",
-      "role": "말법고"
+      "instrument": "잡색",
+      "role": "잡색3"
     }
   ]
 }

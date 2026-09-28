@@ -28,6 +28,7 @@
   ],
   "implementation_status": "documented_only",
   "notes": "동적으로 말리고 풀리는 진형이므로 정적 좌표는 시점 1(완전히 말린 상태) 기준의 참고용. 도구 구현 시 알고리즘 기반 생성 필요.",
+  "implementation_notes": "도구에 달팽이진 생성 기능 없음. 상쇠를 끌어 손으로 나선을 그릴 수는 있으며, 이때 노드 겹침을 막는 ⊛ 충돌 토글(기본 꺼짐)을 쓸 수 있음.",
   "nodes": [
     {
       "id": 1,
@@ -47,48 +48,48 @@
     },
     {
       "id": 3,
-      "instrument": "꽹과리",
-      "role": "3번 꽹과리",
+      "instrument": "징",
+      "role": "징1",
       "x": 382,
       "y": 284.4,
       "heading": -3.998
     },
     {
       "id": 4,
-      "instrument": "꽹과리",
-      "role": "4번 꽹과리",
+      "instrument": "징",
+      "role": "징2",
       "x": 375.3,
       "y": 292.8,
       "heading": -4.427
     },
     {
       "id": 5,
-      "instrument": "꽹과리",
-      "role": "막쇠",
+      "instrument": "장구",
+      "role": "장구1",
       "x": 372.6,
       "y": 303.9,
       "heading": -4.855
     },
     {
       "id": 6,
-      "instrument": "징",
-      "role": "1번 징",
+      "instrument": "장구",
+      "role": "장구2",
       "x": 375.1,
       "y": 316,
       "heading": -5.284
     },
     {
       "id": 7,
-      "instrument": "징",
-      "role": "2번 징",
+      "instrument": "장구",
+      "role": "장구3",
       "x": 383,
       "y": 326.5,
       "heading": -5.712
     },
     {
       "id": 8,
-      "instrument": "징",
-      "role": "3번 징",
+      "instrument": "장구",
+      "role": "장구4",
       "x": 395.3,
       "y": 333,
       "heading": -6.14
@@ -96,7 +97,7 @@
     {
       "id": 9,
       "instrument": "장구",
-      "role": "상장구",
+      "role": "장구5",
       "x": 409.9,
       "y": 333.8,
       "heading": -6.569
@@ -104,31 +105,31 @@
     {
       "id": 10,
       "instrument": "장구",
-      "role": "2번 장구",
+      "role": "장구6",
       "x": 424.3,
       "y": 328.1,
       "heading": -6.997
     },
     {
       "id": 11,
-      "instrument": "장구",
-      "role": "3번 장구",
+      "instrument": "북",
+      "role": "북1",
       "x": 435.6,
       "y": 316.2,
       "heading": -7.426
     },
     {
       "id": 12,
-      "instrument": "장구",
-      "role": "4번 장구",
+      "instrument": "북",
+      "role": "북2",
       "x": 441,
       "y": 300,
       "heading": -7.854
     },
     {
       "id": 13,
-      "instrument": "장구",
-      "role": "말장구",
+      "instrument": "북",
+      "role": "북3",
       "x": 439,
       "y": 282.2,
       "heading": -8.282
@@ -136,39 +137,39 @@
     {
       "id": 14,
       "instrument": "북",
-      "role": "1번 북",
+      "role": "북4",
       "x": 429.3,
       "y": 266.1,
       "heading": -8.711
     },
     {
       "id": 15,
-      "instrument": "북",
-      "role": "2번 북",
+      "instrument": "소고",
+      "role": "소고1",
       "x": 413.2,
       "y": 255.2,
       "heading": -9.139
     },
     {
       "id": 16,
-      "instrument": "북",
-      "role": "3번 북",
+      "instrument": "소고",
+      "role": "소고2",
       "x": 393.1,
       "y": 251.9,
       "heading": -9.568
     },
     {
       "id": 17,
-      "instrument": "북",
-      "role": "4번 북",
+      "instrument": "소고",
+      "role": "소고3",
       "x": 372.7,
       "y": 257.5,
       "heading": -9.996
     },
     {
       "id": 18,
-      "instrument": "북",
-      "role": "5번 북",
+      "instrument": "소고",
+      "role": "소고4",
       "x": 355.9,
       "y": 271.6,
       "heading": -10.424
@@ -176,7 +177,7 @@
     {
       "id": 19,
       "instrument": "소고",
-      "role": "1번 소고",
+      "role": "소고5",
       "x": 346.2,
       "y": 292.3,
       "heading": -10.853
@@ -184,31 +185,31 @@
     {
       "id": 20,
       "instrument": "소고",
-      "role": "2번 소고",
+      "role": "소고6",
       "x": 346,
       "y": 315.9,
       "heading": -11.281
     },
     {
       "id": 21,
-      "instrument": "소고",
-      "role": "3번 소고",
+      "instrument": "잡색",
+      "role": "잡색1",
       "x": 356,
       "y": 338.1,
       "heading": -11.71
     },
     {
       "id": 22,
-      "instrument": "소고",
-      "role": "4번 소고",
+      "instrument": "잡색",
+      "role": "잡색2",
       "x": 375,
       "y": 354.7,
       "heading": -12.138
     },
     {
       "id": 23,
-      "instrument": "소고",
-      "role": "말법고",
+      "instrument": "잡색",
+      "role": "잡색3",
       "x": 400,
       "y": 362,
       "heading": -12.566
