@@ -310,7 +310,12 @@ function initNodes() {
   const cx = stageW / 2;
   const cy = stageH / 2;
 
-  if (nodeCount >= 3) {
+  // 잡색은 원진에 들지 않고 원 안에 따로 섬 (잡색은 편성의 맨 끝)
+  const japIdx = INSTRUMENT_GROUPS.findIndex(g => g.label === '잡색');
+  const jap = japIdx >= 0 ? Math.min(composition[japIdx], nodeCount) : 0;
+  const ring = nodeCount - jap; // 상쇠 + 원을 이루는 사람
+
+  if (ring >= 3) {
     // 원진 프리셋 (고창농악 1마당 원진_1)
     // 상쇠(1번)는 원 중앙에 분리 상태로 배치
     nodes.push({
@@ -321,21 +326,33 @@ function initNodes() {
       sitting: false,
       selected: false,
     });
-    // 나머지(nodeCount - 1)명이 원을 이룸 (반시계 방향으로 진행, "왼쪽으로 돈다")
+    // 나머지(ring - 1)명이 원을 이룸 (반시계 방향으로 진행, "왼쪽으로 돈다")
     const idealR = Math.min(stageW, stageH) * 0.36;
-    const minR = (nodeCount - 1) * 32 / (2 * Math.PI); // MIN_NODE_GAP 적용
+    const minR = (ring - 1) * 32 / (2 * Math.PI); // MIN_NODE_GAP 적용
     const radius = Math.max(idealR, minR);
     // 시작 각도: 12시 방향에서 약간 오른쪽 (2번이 무대 뒤쪽 약간 우측)
     const startAngle = -Math.PI / 2 + 0.35;
-    for (let i = 1; i < nodeCount; i++) {
+    for (let i = 1; i < ring; i++) {
       // 시계방향 배치 (번호 순서대로 오른쪽으로 내려가며 돌아옴)
-      const angle = startAngle + (i - 1) * (2 * Math.PI / (nodeCount - 1));
+      const angle = startAngle + (i - 1) * (2 * Math.PI / (ring - 1));
       nodes.push({
         x: cx + radius * Math.cos(angle),
         y: cy + radius * Math.sin(angle),
         // 반시계 방향(왼쪽으로 돈다)으로 진행하는 접선 방향
         heading: angle - Math.PI / 2,
         detached: false,
+        sitting: false,
+        selected: false,
+      });
+    }
+    // 잡색: 원 안, 상쇠와 원 사이에 떨어진 상태로 고르게
+    for (let k = 0; k < jap; k++) {
+      const a = Math.PI / 2 + (k + 0.5) * (2 * Math.PI / jap);
+      nodes.push({
+        x: cx + radius * 0.55 * Math.cos(a),
+        y: cy + radius * 0.55 * Math.sin(a),
+        heading: Math.PI / 2,
+        detached: true,
         sitting: false,
         selected: false,
       });
