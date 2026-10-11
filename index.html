@@ -54,6 +54,10 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 .instrument-legend{display:flex;flex-wrap:wrap;gap:4px;padding:8px 12px;border-bottom:1px solid #d8dde6}
 .legend-item{display:flex;align-items:center;gap:3px;font-size:10px;color:#5a6072}
 .legend-dot{width:10px;height:10px;border-radius:50%}
+.comp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.comp-item{display:flex;align-items:center;gap:3px;font-size:12px;white-space:nowrap}
+.comp-item input{width:42px}
+.comp-total{font-size:11px;color:#7a8296;white-space:nowrap}
 .mode-indicator{font-size:11px;padding:3px 8px;border-radius:10px;background:#e94560;color:#fff;font-weight:500}
 .playback-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .playback-controls .btn{white-space:nowrap}
@@ -83,8 +87,8 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 
     <!-- 홈 탭 -->
     <div class="tab-panel active" data-panel="home">
-      <label>노드 수</label>
-      <input type="number" id="nodeCount" value="20" min="1" max="50">
+      <span class="comp-row" id="compRow" title="악기별 인원. 늘리면 그 악기 줄 끝에 한 명이 들어가고, 줄이면 그 악기의 마지막 사람이 빠집니다"></span>
+      <span class="comp-total" id="compTotal"></span>
       <label>간격</label>
       <input type="range" id="spacing" min="30" max="150" value="50">
       <span id="spacingVal" style="font-size:11px;min-width:28px">50</span>
@@ -194,34 +198,47 @@ const canvas = document.getElementById('stage');
 const ctx = canvas.getContext('2d');
 const container = document.querySelector('.stage-wrapper');
 
-const INSTRUMENTS = [
-  {name:'상쇠', color:'#e94560'},
-  {name:'부쇠', color:'#e94560'},
-  {name:'징1', color:'#9b59b6'},
-  {name:'징2', color:'#9b59b6'},
-  {name:'장구1', color:'#3498db'},
-  {name:'장구2', color:'#3498db'},
-  {name:'장구3', color:'#3498db'},
-  {name:'장구4', color:'#3498db'},
-  {name:'장구5', color:'#3498db'},
-  {name:'장구6', color:'#3498db'},
-  {name:'북1', color:'#2ecc71'},
-  {name:'북2', color:'#2ecc71'},
-  {name:'북3', color:'#2ecc71'},
-  {name:'북4', color:'#2ecc71'},
-  {name:'소고1', color:'#e67e22'},
-  {name:'소고2', color:'#e67e22'},
-  {name:'소고3', color:'#e67e22'},
-  {name:'소고4', color:'#e67e22'},
-  {name:'소고5', color:'#e67e22'},
-  {name:'소고6', color:'#e67e22'},
-  {name:'잡색1', color:'#f1c40f'},
-  {name:'잡색2', color:'#f1c40f'},
-  {name:'잡색3', color:'#f1c40f'},
+// ─── 편성: 악기별 인원 ───
+// 노드 배열 순서 = 체인 순서 = 악기 순서 (꽹과리 → 징 → 장구 → 북 → 소고 → 잡색).
+// 꽹과리 1번은 상쇠, 2번은 부쇠. 상쇠가 머리이므로 꽹과리는 최소 1명.
+const INSTRUMENT_GROUPS = [
+  { label: '꽹과리', color: '#e94560', min: 1, def: 2 },
+  { label: '징',     color: '#9b59b6', min: 0, def: 2 },
+  { label: '장구',   color: '#3498db', min: 0, def: 6 },
+  { label: '북',     color: '#2ecc71', min: 0, def: 4 },
+  { label: '소고',   color: '#e67e22', min: 0, def: 6 },
+  { label: '잡색',   color: '#f1c40f', min: 0, def: 0 },
 ];
+const MAX_TOTAL_NODES = 50;
+let composition = INSTRUMENT_GROUPS.map(g => g.def); // 악기별 현재 인원
 
-// 기본 인원: 상쇠~말법고(소고 마지막) 20명. 잡색(21~23번)은 기본으로 넣지 않고, 필요하면 노드 수를 23으로 올림
-const DEFAULT_NODE_COUNT = 20;
+function memberName(g, k) {
+  if (g === 0) return k === 0 ? '상쇠' : k === 1 ? '부쇠' : `꽹과리${k + 1}`;
+  return INSTRUMENT_GROUPS[g].label + (k + 1);
+}
+function buildInstruments(comp) {
+  const list = [];
+  comp.forEach((n, g) => {
+    for (let k = 0; k < n; k++) list.push({ name: memberName(g, k), color: INSTRUMENT_GROUPS[g].color, group: g });
+  });
+  return list;
+}
+let INSTRUMENTS = buildInstruments(composition);
+// g번 악기의 첫 사람이 노드 배열에서 몇 번째인지
+function groupStart(g, comp = composition) {
+  let s = 0;
+  for (let i = 0; i < g; i++) s += comp[i];
+  return s;
+}
+// 이름으로 악기 찾기 (저장 파일의 instruments 목록 해석용). 모르면 -1
+function groupOfName(name) {
+  if (name === '상쇠' || name === '부쇠' || /^꽹과리\d*$/.test(name)) return 0;
+  const base = String(name).replace(/\d+$/, '');
+  return INSTRUMENT_GROUPS.findIndex(x => x.label === base);
+}
+
+// 기본 인원: 꽹과리 2·징 2·장구 6·북 4·소고 6 = 20명 (상쇠~말법고). 잡색은 기본 0명
+const DEFAULT_NODE_COUNT = INSTRUMENT_GROUPS.reduce((a, g) => a + g.def, 0);
 let nodeCount = DEFAULT_NODE_COUNT;
 let spacing = 50;
 
@@ -293,7 +310,7 @@ function initNodes() {
   const cx = stageW / 2;
   const cy = stageH / 2;
 
-  if (nodeCount === DEFAULT_NODE_COUNT) {
+  if (nodeCount >= 3) {
     // 원진 프리셋 (고창농악 1마당 원진_1)
     // 상쇠(1번)는 원 중앙에 분리 상태로 배치
     nodes.push({
@@ -1460,18 +1477,116 @@ document.getElementById('btnUndo').addEventListener('click', () => {
 });
 
 // Controls
-document.getElementById('nodeCount').addEventListener('change', (e) => {
+// ─── 악기별 인원 조절 ───
+// 늘리면 그 악기 줄 끝(앞사람 옆)에 한 명을 끼우고, 줄이면 그 악기의 마지막 사람을 뺀다.
+// 다른 사람의 위치는 그대로. 키프레임·녹화한 동작·끊어 둔 지점도 같은 자리에서 끼우고 빼서 번호를 맞춘다.
+function renderCompositionUI() {
+  const row = document.getElementById('compRow');
+  if (!row.children.length) {
+    INSTRUMENT_GROUPS.forEach((g, i) => {
+      const item = document.createElement('label');
+      item.className = 'comp-item';
+      item.innerHTML = `<span class="legend-dot" style="background:${g.color}"></span>${g.label}` +
+        `<input type="number" id="compCount${i}" min="${g.min}" max="${MAX_TOTAL_NODES}" step="1">`;
+      item.querySelector('input').addEventListener('change', (e) => setGroupCount(i, parseInt(e.target.value, 10)));
+      row.appendChild(item);
+    });
+  }
+  INSTRUMENT_GROUPS.forEach((g, i) => { document.getElementById('compCount' + i).value = composition[i]; });
+  document.getElementById('compTotal').textContent = `총 ${nodes.length}명`;
+}
+
+// 끊어 둔 지점 키('a-b')를 한 명 끼우거나(+1) 뺀(-1) 뒤의 번호로 옮김
+function shiftBrokenLinks(at, delta) {
+  const next = new Set();
+  for (const key of brokenLinks) {
+    let [a, b] = key.split('-').map(Number);
+    if (delta > 0) {
+      // 끊긴 지점에 끼우면 새 사람은 앞사람 옆에 서므로 앞 조각에 붙이고, 끊김은 새 사람 뒤로 옮김
+      if (a < at && b >= at) next.add(at + '-' + (b + 1));
+      else next.add((a >= at ? a + 1 : a) + '-' + (b >= at ? b + 1 : b));
+    } else {
+      // 빠진 사람에 걸린 끊김은 그 앞뒤 사람 사이로 옮김
+      let na = a > at ? a - 1 : a, nb = b > at ? b - 1 : b;
+      if (a === at) na = at - 1;
+      if (b === at) nb = at;
+      if (na >= 0 && nb < nodes.length && na < nb) next.add(na + '-' + nb);
+    }
+  }
+  brokenLinks = next;
+}
+
+function insertMember(g) {
+  const at = groupStart(g) + composition[g]; // 새 사람이 들어갈 자리 (그 악기 줄 끝)
+  const prev = nodes[at - 1], prev2 = nodes[at - 2];
+  const ref = prev || nodes[at] || { x: stageW / 2, y: stageH / 2, heading: 0 };
+  let dx = 25, dy = 0;
+  if (prev && prev2) {
+    const vx = prev.x - prev2.x, vy = prev.y - prev2.y, m = Math.hypot(vx, vy) || 1;
+    dx = vx / m * 25; dy = vy / m * 25;
+  }
+  nodes.splice(at, 0, { x: ref.x + dx, y: ref.y + dy, heading: ref.heading || 0, detached: false, sitting: false, selected: false });
+  const name = memberName(g, composition[g]);
+  for (const kf of keyframes) {
+    const r = kf.nodes[at - 1] || kf.nodes[at];
+    if (!r) continue;
+    const px = Math.round(r.px + dx), py = Math.round(r.py + dy);
+    kf.nodes.splice(at, 0, Object.assign({}, r, {
+      px, py, x: Math.round(px * 100 / stageW) / 100, y: Math.round(py * 100 / stageH) / 100,
+      detached: false, sitting: false, instrument: name,
+    }));
+  }
+  for (const c of recordedClips) {
+    for (const f of c.frames) {
+      const r = f[at - 1] || f[at];
+      if (r) f.splice(at, 0, { x: r.x + dx, y: r.y + dy, heading: r.heading, detached: false, sitting: false });
+    }
+  }
+  composition[g]++;
+  shiftBrokenLinks(at, +1);
+}
+
+function removeMember(g) {
+  const at = groupStart(g) + composition[g] - 1; // 그 악기의 마지막 사람
+  nodes.splice(at, 1);
+  for (const kf of keyframes) kf.nodes.splice(at, 1);
+  for (const c of recordedClips) for (const f of c.frames) f.splice(at, 1);
+  composition[g]--;
+  shiftBrokenLinks(at, -1);
+}
+
+function setGroupCount(g, target) {
+  const G = INSTRUMENT_GROUPS[g];
   if (isRecording) {
-    e.target.value = nodes.length;
+    renderCompositionUI();
     showToast('녹화 중에는 인원을 바꿀 수 없습니다. 녹화를 멈춘 뒤 바꾸세요');
     return;
   }
-  const newCount = Math.max(1, Math.min(50, parseInt(e.target.value) || DEFAULT_NODE_COUNT));
-  e.target.value = newCount;
-  resizeNodeCount(newCount);
+  if (!Number.isFinite(target)) { renderCompositionUI(); return; }
+  const others = nodes.length - composition[g];
+  target = Math.max(G.min, Math.min(target, MAX_TOTAL_NODES - others));
+  if (target === composition[g]) { renderCompositionUI(); return; }
+  if (isPlaying) stopPlayback();
+  while (composition[g] < target) insertMember(g);
+  while (composition[g] > target) removeMember(g);
+  INSTRUMENTS = buildInstruments(composition);
+  nodeCount = nodes.length;
+  snappedCircle = null;
   path = [];
+  undoStack = []; // 인원이 다른 예전 상태로는 되돌릴 수 없음
+  renderCompositionUI();
+  renderKeyframes();
   draw();
-});
+  showToast(`${G.label} ${composition[g]}명 · 총 ${nodes.length}명`);
+}
+
+// 저장 파일을 열 때 등: 편성을 통째로 바꾸고 노드 수를 맞춤 (위치는 호출한 쪽에서 덮어씀)
+function applyComposition(comp) {
+  composition = comp.slice();
+  INSTRUMENTS = buildInstruments(composition);
+  resizeNodeCount(composition.reduce((a, b) => a + b, 0));
+  renderCompositionUI();
+}
 
 const spacingSlider = document.getElementById('spacing');
 spacingSlider.addEventListener('input', (e) => {
@@ -2751,6 +2866,7 @@ function buildRecordFile() {
     savedAt: new Date().toISOString(),
     stage: { width: stageW, height: stageH },
     nodeCount: nodes.length,
+    composition: Object.fromEntries(INSTRUMENT_GROUPS.map((g, i) => [g.label, composition[i]])),
     instruments: nodes.map((_, i) => getInstrument(i).name),
     spacing: spacing,
     brokenLinks: Array.from(brokenLinks),
@@ -2790,12 +2906,41 @@ document.getElementById('btnSaveFile').addEventListener('click', () => {
   showToast(`저장: 동작 ${recordedClips.length}개, 키프레임 ${keyframes.length}개`);
 });
 
+// 저장 파일의 편성 읽기. composition이 있으면 그대로, 없으면(예전 파일) instruments 이름으로 셈
+function compositionFromFile(data) {
+  const n = data.nodeCount;
+  const c = data.composition;
+  if (c && typeof c === 'object') {
+    const comp = INSTRUMENT_GROUPS.map(g => Number.isInteger(c[g.label]) ? c[g.label] : 0);
+    if (comp.reduce((a, b) => a + b, 0) === n && comp[0] >= 1) return comp;
+  }
+  if (Array.isArray(data.instruments) && data.instruments.length === n) {
+    const comp = INSTRUMENT_GROUPS.map(() => 0);
+    for (const name of data.instruments) {
+      const g = groupOfName(name);
+      comp[g >= 0 ? g : INSTRUMENT_GROUPS.length - 1]++; // 모르는 이름(예전 24번 이후 회색 노드)은 맨 끝 악기로
+    }
+    if (comp[0] >= 1) return comp;
+  }
+  // 정보가 없으면 기본 순서대로 채우고 남는 인원은 잡색으로
+  const comp = INSTRUMENT_GROUPS.map(() => 0);
+  let left = n;
+  INSTRUMENT_GROUPS.forEach((g, i) => { const k = Math.min(g.def, left); comp[i] = k; left -= k; });
+  comp[INSTRUMENT_GROUPS.length - 1] += left;
+  if (comp[0] < 1) comp[0] = 1;
+  return comp;
+}
+
 // 파일 내용 검증. 문제가 있으면 사유 문자열, 정상이면 null.
 function validateRecordFile(data) {
   if (!data || data.format !== RECORD_FORMAT) return '고창농악 기록 파일이 아닙니다';
   if (typeof data.version !== 'number' || data.version > RECORD_VERSION) return '이 도구보다 새 버전의 파일입니다';
   const n = data.nodeCount;
-  if (!Number.isInteger(n) || n < 1 || n > 50) return '노드 수 정보가 잘못되었습니다';
+  if (!Number.isInteger(n) || n < 1 || n > MAX_TOTAL_NODES) return '노드 수 정보가 잘못되었습니다';
+  if (data.composition && typeof data.composition === 'object') {
+    const sum = INSTRUMENT_GROUPS.reduce((a, g) => a + (Number.isInteger(data.composition[g.label]) ? data.composition[g.label] : 0), 0);
+    if (sum !== n) return '악기별 인원과 총 인원이 맞지 않습니다';
+  }
   const okSnap = s => Array.isArray(s) && s.length === n &&
     s.every(a => Array.isArray(a) && a.length >= 3 && a.slice(0, 3).every(Number.isFinite));
   if (!okSnap(data.current)) return '현재 진형 정보가 손상되었습니다';
@@ -2811,11 +2956,8 @@ function applyRecordFile(data) {
   if (isRecording) stopRecording();
   saveUndo();
 
-  // 노드 수 맞추기
-  if (data.nodeCount !== nodes.length) {
-    resizeNodeCount(data.nodeCount);
-    document.getElementById('nodeCount').value = data.nodeCount;
-  }
+  // 편성 맞추기 (악기별 인원)
+  applyComposition(compositionFromFile(data));
 
   // 캔버스 크기가 다르면 중심을 맞춰 평행이동 (모양·간격은 그대로)
   const sw = (data.stage && data.stage.width) || stageW;
@@ -3435,11 +3577,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 initNodes();
+renderCompositionUI();
 draw();
 requestAnimationFrame(recordWatchTick);
 
 // 난진 1장만 — 사용자 요청: "난진을 그려라"
-if (nodeCount === DEFAULT_NODE_COUNT) {
+if (nodes.length >= 3) {
   arrangeNanjin();
   draw();
   saveKeyframe('난진 (어름굿)');
