@@ -77,6 +77,15 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 #confirmBtns{display:flex;justify-content:flex-end;gap:8px}
 @keyframes pulse{0%,100%{background:#c0392b}50%{background:#e94560}}
 .btn.recording{animation:pulse 1s infinite;border-color:#e94560;color:#fff}
+/* 녹화 중 표시: 무대 테두리 빛, 무대 위 REC 배지, 애니메이션 탭의 빨간 점 */
+.canvas-frame.recording{border-radius:6px;animation:recGlow 1.2s ease-in-out infinite}
+@keyframes recGlow{0%,100%{box-shadow:0 0 0 3px rgba(233,69,96,.9)}50%{box-shadow:0 0 0 7px rgba(233,69,96,.35)}}
+.rec-badge{position:absolute;top:8px;left:8px;z-index:22;display:none;align-items:center;gap:7px;background:#c0392b;color:#fff;font-size:13px;font-weight:700;padding:4px 11px;border-radius:14px;pointer-events:none;letter-spacing:.5px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.rec-badge.show{display:flex}
+.rec-badge .dot{width:9px;height:9px;border-radius:50%;background:#fff;animation:recBlink 1s steps(1) infinite}
+.rec-badge .sub{font-weight:400;opacity:.9}
+@keyframes recBlink{50%{opacity:0}}
+.tab-btn.rec-on::after{content:'';display:inline-block;width:8px;height:8px;border-radius:50%;background:#e94560;margin-left:6px;vertical-align:1px;animation:recBlink 1s steps(1) infinite}
 </style>
 </head>
 <body>
@@ -150,6 +159,7 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
       <div class="canvas-frame" id="canvasFrame">
         <canvas id="stage"></canvas>
         <div class="size-label" id="sizeLabel"></div>
+        <div class="rec-badge" id="recBadge"><span class="dot"></span>녹화 중 <span id="recTime">0:00</span><span class="sub" id="recClips"></span></div>
         <div class="ctx-menu" id="ctxMenu">
           <button data-act="selectNode">이 노드만 선택</button>
           <button data-act="selectChain">체인 전체 선택</button>
@@ -1680,8 +1690,28 @@ document.getElementById('btnRecord').addEventListener('click', () => {
   }
 });
 
+// 녹화 중 표시 갱신 (경과 시간, 동작 수)
+let recStartedAt = 0, recTimer = null;
+const baseTitle = document.title;
+function updateRecIndicator() {
+  const on = isRecording;
+  document.getElementById('canvasFrame').classList.toggle('recording', on);
+  document.getElementById('recBadge').classList.toggle('show', on);
+  const tab = document.querySelector('.tab-btn[data-tab="anim"]');
+  if (tab) tab.classList.toggle('rec-on', on);
+  document.title = on ? '● 녹화 중 — ' + baseTitle : baseTitle;
+  if (!on) return;
+  const sec = Math.floor((performance.now() - recStartedAt) / 1000);
+  document.getElementById('recTime').textContent = Math.floor(sec / 60) + ':' + String(sec % 60).padStart(2, '0');
+  const n = recordedClips.length + (currentClip ? 1 : 0);
+  document.getElementById('recClips').textContent = n ? ` · 동작 ${n}` : '';
+}
+
 function startRecording() {
   isRecording = true;
+  recStartedAt = performance.now();
+  clearInterval(recTimer);
+  recTimer = setInterval(updateRecIndicator, 250);
   // 기존 클립은 지우지 않고 뒤에 이어붙임 (불러온 기록에 이어서 녹화 가능). 삭제는 목록의 ✕로.
   currentClip = null;
   syncWatch();
@@ -1691,6 +1721,7 @@ function startRecording() {
   showToast(recordedClips.length
     ? `녹화 시작 — 기존 ${recordedClips.length}개 동작 뒤에 이어서 기록합니다`
     : '녹화 시작 — 노드를 드래그하면 그대로 기록됩니다');
+  updateRecIndicator();
   renderKeyframes();
 }
 
@@ -1701,6 +1732,8 @@ function stopRecording() {
   const btn = document.getElementById('btnRecord');
   btn.classList.remove('recording');
   btn.textContent = '⏺ 녹화';
+  clearInterval(recTimer); recTimer = null;
+  updateRecIndicator();
   showToast(`녹화 종료 — ${recordedClips.length}개 동작 기록됨`);
   renderKeyframes();
 }
@@ -2906,6 +2939,11 @@ function decodeSnap(arr, dx, dy) {
   }));
 }
 
+function lastRecordedFrame() {
+  const c = recordedClips[recordedClips.length - 1];
+  return c && c.frames.length ? c.frames[c.frames.length - 1] : null;
+}
+
 function buildRecordFile() {
   return {
     format: RECORD_FORMAT,
@@ -2918,7 +2956,8 @@ function buildRecordFile() {
     instruments: nodes.map((_, i) => getInstrument(i).name),
     spacing: spacing,
     brokenLinks: Array.from(brokenLinks),
-    current: encodeSnap(nodeSnapshot()),
+    // 녹화한 동작이 있으면 녹화된 것만 기록: 현재 진형 = 마지막 동작의 끝 모습 (녹화를 멈춘 뒤 움직인 것은 무시)
+    current: encodeSnap(lastRecordedFrame() || nodeSnapshot()),
     clips: recordedClips.map((c, i) => ({
       name: `동작 ${i + 1}`,
       times: c.times || null,
@@ -3048,8 +3087,8 @@ function applyRecordFile(data) {
     document.getElementById('spacingVal').textContent = spacing;
   }
 
-  // 현재 진형
-  applySnapshot(decodeSnap(data.current, dx, dy));
+  // 현재 진형: 녹화한 동작이 있으면 마지막 동작의 끝 모습 (파일의 current는 무시. 예전 파일은 녹화를 멈춘 뒤 움직인 모습이 들어 있을 수 있음)
+  applySnapshot(lastRecordedFrame() || decodeSnap(data.current, dx, dy));
   for (const nd of nodes) nd.selected = false;
   snappedCircle = null;
   path = [];
