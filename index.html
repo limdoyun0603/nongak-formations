@@ -273,6 +273,7 @@ function resizeCanvas() {
         if (kf.nodes) kf.nodes.forEach(kn => { kn.px += dx; kn.py += dy; });
       });
     }
+    try { shiftRecording(dx, dy); } catch (err) { /* 초기화 전에는 녹화 데이터가 없음 */ }
   }
   draw();
 }
@@ -1316,8 +1317,8 @@ canvas.addEventListener('mouseup', (e) => {
   } else if (wasChain && !wasJustEscaped && autoSnapEnabled && draggedSeg.length >= 5 && isCircleSnappable(draggedSeg)) {
     snapToCircle(draggedSeg);
   }
-  // 녹화: 이 드래그 동작을 하나의 클립으로 마감
-  if (isRecording) finishClip();
+  // 녹화: 이 드래그 동작을 하나의 클립으로 마감 (이어지는 원진 자동 정리까지 포함)
+  settleCurrentClip();
   mouseDownInfo = null;
   draw();
 });
@@ -1340,6 +1341,7 @@ canvas.addEventListener('mouseleave', () => {
   liveOrbit = null;
   stickyActive = false;
   canvas.style.cursor = 'default';
+  settleCurrentClip(); // 녹화 중 드래그가 캔버스 밖에서 끝나도 그 동작을 마감
   draw();
 });
 
@@ -1451,6 +1453,11 @@ document.getElementById('btnUndo').addEventListener('click', () => {
 
 // Controls
 document.getElementById('nodeCount').addEventListener('change', (e) => {
+  if (isRecording) {
+    e.target.value = nodes.length;
+    showToast('녹화 중에는 인원을 바꿀 수 없습니다. 녹화를 멈춘 뒤 바꾸세요');
+    return;
+  }
   const newCount = Math.max(1, Math.min(50, parseInt(e.target.value) || 23));
   e.target.value = newCount;
   resizeNodeCount(newCount);
@@ -1527,6 +1534,7 @@ function startRecording() {
   isRecording = true;
   // 기존 클립은 지우지 않고 뒤에 이어붙임 (불러온 기록에 이어서 녹화 가능). 삭제는 목록의 ✕로.
   currentClip = null;
+  syncWatch();
   const btn = document.getElementById('btnRecord');
   btn.classList.add('recording');
   btn.textContent = '⏹ 녹화 중지';
@@ -1539,6 +1547,7 @@ function startRecording() {
 function stopRecording() {
   isRecording = false;
   if (currentClip) { finishClip(); }
+  watchSig = null; watchSnap = null;
   const btn = document.getElementById('btnRecord');
   btn.classList.remove('recording');
   btn.textContent = '⏺ 녹화';
@@ -1549,14 +1558,15 @@ function stopRecording() {
 // 드래그 시작 시 호출: 새 클립 시작, 시작 상태 캡처
 function recordClipStart() {
   if (!isRecording) return;
+  if (currentClip) closeSettlingClip(); // 앞 동작(자동 정리 등)이 아직 기록 중이면 먼저 마감
   clipStartTime = performance.now();
   lastSnapshotTime = clipStartTime;
-  currentClip = { frames: [ nodeSnapshot() ], times: [0] };
+  currentClip = { kind: 'drag', frames: [ nodeSnapshot() ], times: [0] };
 }
 
 // 드래그 중 매 이동 시 호출: 프레임 캡처 (과도한 캡처 방지 위해 최소 시간 간격)
 function recordFrame() {
-  if (!isRecording || !currentClip) return;
+  if (!isRecording || !currentClip || currentClip.kind !== 'drag' || currentClip.settling) return;
   const now = performance.now();
   if (now - lastSnapshotTime < 16) return; // 약 60fps 상한
   lastSnapshotTime = now;
@@ -1576,6 +1586,90 @@ function finishClip() {
     renderKeyframes();
   }
   currentClip = null;
+}
+
+// ─── 드래그 밖의 변화도 녹화 ───
+// 버튼(난진·11자진·반연풍 등), 원진 자동 정리, 실행취소처럼 드래그가 아닌 변화도 녹화되도록
+// 녹화 중에는 매 프레임 노드 상태를 살핀다. 드래그가 아닌데 상태가 바뀌면 직전 상태부터 클립을 만들고,
+// 변화가 SETTLE_MS 동안 멈추면 마감한다. 드래그 클립은 손을 뗀 뒤 이어지는 자동 정리가 끝날 때까지 이어서 기록.
+const SETTLE_MS = 250;
+let watchSig = null;   // 마지막으로 본 상태의 지문
+let watchSnap = null;  // 마지막으로 본 상태 (변화 클립의 첫 프레임)
+let lastChangeTime = 0;
+
+function stateSig() {
+  let s = String(nodes.length);
+  for (const n of nodes) {
+    s += '|' + n.x.toFixed(1) + ',' + n.y.toFixed(1) + ',' + n.heading.toFixed(3) + (n.detached ? 'd' : '') + (n.sitting ? 's' : '');
+  }
+  return s;
+}
+
+function syncWatch() { watchSig = stateSig(); watchSnap = nodeSnapshot(); }
+
+// 기록 중인 클립을 마지막 상태 그대로 마감 (마지막 프레임을 중복 추가하지 않음)
+function closeSettlingClip() {
+  const clip = currentClip;
+  currentClip = null;
+  if (clip && clip.frames.length >= 2) {
+    recordedClips.push(clip);
+    renderKeyframes();
+  }
+}
+
+// 드래그를 뗐을 때: 그 순간을 기록하고, 이어지는 자동 정리는 감시 루프가 이어서 기록 후 마감
+function settleCurrentClip() {
+  if (!isRecording || !currentClip || currentClip.settling) return;
+  const now = performance.now();
+  currentClip.frames.push(nodeSnapshot());
+  currentClip.times.push(Math.round(now - clipStartTime));
+  currentClip.settling = true;
+  lastChangeTime = now;
+  watchSig = stateSig();
+}
+
+function recordWatchTick() {
+  if (isRecording) {
+    const now = performance.now();
+    const sig = stateSig();
+    if (isPlaying) {
+      // 재생으로 생긴 변화는 기록하지 않음
+      watchSig = sig; watchSnap = null;
+    } else if (currentClip && currentClip.kind === 'drag' && !currentClip.settling) {
+      // 드래그 중: recordFrame이 기록
+      watchSig = sig; watchSnap = null;
+    } else if (currentClip) {
+      // 변화 클립 기록 중이거나, 드래그를 뗀 뒤 자동 정리를 기다리는 중
+      if (sig !== watchSig) {
+        currentClip.frames.push(nodeSnapshot());
+        currentClip.times.push(Math.round(now - clipStartTime));
+        watchSig = sig;
+        lastChangeTime = now;
+      } else if (now - lastChangeTime >= SETTLE_MS) {
+        closeSettlingClip();
+        watchSnap = nodeSnapshot();
+      }
+    } else if (watchSnap && sig !== watchSig) {
+      // 드래그가 아닌 변화가 시작됨 → 직전 상태를 첫 프레임으로 새 클립
+      clipStartTime = now - 16;
+      currentClip = { kind: 'change', frames: [watchSnap, nodeSnapshot()], times: [0, 16] };
+      watchSig = sig;
+      lastChangeTime = now;
+    } else if (sig !== watchSig || !watchSnap) {
+      watchSig = sig;
+      watchSnap = nodeSnapshot();
+    }
+  }
+  requestAnimationFrame(recordWatchTick);
+}
+
+// 캔버스 크기가 바뀌어 노드가 평행이동될 때, 녹화된 동작도 같이 옮김 (재생 위치가 어긋나지 않게)
+function shiftRecording(dx, dy) {
+  const shift = snap => { if (snap) for (const s of snap) { s.x += dx; s.y += dy; } };
+  for (const c of recordedClips) c.frames.forEach(shift);
+  if (currentClip) currentClip.frames.forEach(shift);
+  shift(watchSnap);
+  if (watchSig !== null) watchSig = stateSig();
 }
 
 // 최소 간격: 노드끼리 물리적으로 겹치지 않는 최소 중심 간 거리
@@ -3331,6 +3425,7 @@ window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 initNodes();
 draw();
+requestAnimationFrame(recordWatchTick);
 
 // 난진 1장만 — 사용자 요청: "난진을 그려라"
 if (nodeCount === 23) {
