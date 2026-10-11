@@ -69,6 +69,12 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 .speed-display{font-size:11px;color:#5a6072;min-width:30px}
 #toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2a9d5c;color:#fff;padding:8px 20px;border-radius:6px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999}
 #toast.show{opacity:1}
+/* 확인 창: 브라우저 confirm()은 미리보기 창(샌드박스) 등에서 막혀 그냥 '취소'가 되므로 화면 안에 직접 띄움 */
+#confirmOverlay{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:1000;padding:16px}
+#confirmOverlay.show{display:flex}
+#confirmBox{background:#fff;border-radius:8px;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:20px 22px;max-width:420px;width:100%}
+#confirmMsg{font-size:14px;line-height:1.6;color:#333;white-space:pre-line;margin-bottom:16px}
+#confirmBtns{display:flex;justify-content:flex-end;gap:8px}
 @keyframes pulse{0%,100%{background:#c0392b}50%{background:#e94560}}
 .btn.recording{animation:pulse 1s infinite;border-color:#e94560;color:#fff}
 </style>
@@ -192,6 +198,10 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 </div>
 
 <div id="toast"></div>
+<div id="confirmOverlay"><div id="confirmBox" role="dialog" aria-modal="true">
+  <div id="confirmMsg"></div>
+  <div id="confirmBtns"><button class="btn" id="confirmNo">취소</button><button class="btn" id="confirmYes">확인</button></div>
+</div></div>
 
 <script>
 const canvas = document.getElementById('stage');
@@ -2561,9 +2571,30 @@ function refreshGasrakDropdown() {
   refreshGasrakDropdown();
 })();
 
+// 화면 안 확인 창. 결과는 Promise<boolean> (확인 true / 취소·Esc·바깥 클릭 false)
+let confirmResolve = null;
+function askConfirm(msg, yesLabel = '확인') {
+  if (confirmResolve) confirmResolve(false);
+  document.getElementById('confirmMsg').textContent = msg;
+  document.getElementById('confirmYes').textContent = yesLabel;
+  document.getElementById('confirmOverlay').classList.add('show');
+  document.getElementById('confirmYes').focus();
+  return new Promise(res => { confirmResolve = res; });
+}
+function closeConfirm(result) {
+  document.getElementById('confirmOverlay').classList.remove('show');
+  const res = confirmResolve; confirmResolve = null;
+  if (res) res(result);
+}
+document.getElementById('confirmYes').addEventListener('click', () => closeConfirm(true));
+document.getElementById('confirmNo').addEventListener('click', () => closeConfirm(false));
+document.getElementById('confirmOverlay').addEventListener('mousedown', (e) => {
+  if (e.target.id === 'confirmOverlay') closeConfirm(false);
+});
+
 // Clear
-document.getElementById('btnClear').addEventListener('click', () => {
-  if (confirm('모든 노드 위치를 초기화하시겠습니까?')) {
+document.getElementById('btnClear').addEventListener('click', async () => {
+  if (await askConfirm('모든 노드 위치를 초기화할까요?', '초기화')) {
     initNodes();
     path = [];
     undoStack = [];
@@ -3038,14 +3069,15 @@ fileLoadInput.addEventListener('change', () => {
   const file = fileLoadInput.files && fileLoadInput.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
     let data;
     try { data = JSON.parse(reader.result); }
     catch (err) { showToast('JSON 형식이 아닌 파일입니다'); return; }
     const problem = validateRecordFile(data);
     if (problem) { showToast('불러오기 실패: ' + problem); return; }
     if ((recordedClips.length || keyframes.length) &&
-        !confirm('지금 작업 중인 동작·키프레임이 불러온 파일 내용으로 바뀝니다. 계속할까요?\n(필요하면 먼저 "기록 파일 저장"으로 저장하세요)')) {
+        !(await askConfirm('지금 작업 중인 동작·키프레임이 불러온 파일 내용으로 바뀝니다. 계속할까요?\n(필요하면 먼저 💾 파일로 저장하세요)', '불러오기'))) {
+      showToast('파일 열기를 취소했습니다');
       return;
     }
     applyRecordFile(data);
@@ -3063,6 +3095,12 @@ function showToast(msg) {
 
 // Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
+  // 확인 창이 떠 있으면 Enter=확인, Esc=취소, 나머지 단축키는 막음
+  if (confirmResolve) {
+    if (e.key === 'Escape') { e.preventDefault(); closeConfirm(false); }
+    else if (e.key === 'Enter' && document.activeElement !== document.getElementById('confirmNo')) { e.preventDefault(); closeConfirm(true); }
+    return;
+  }
   // 입력 필드에서는 단축키 무시
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
