@@ -77,6 +77,8 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 #confirmBtns{display:flex;justify-content:flex-end;gap:8px}
 @keyframes pulse{0%,100%{background:#c0392b}50%{background:#e94560}}
 .btn.recording{animation:pulse 1s infinite;border-color:#e94560;color:#fff}
+.autorot-speed{font-size:12px;color:#5a6278;display:inline-flex;align-items:center;gap:4px}
+.autorot-speed input{width:48px}
 /* 녹화 중 표시: 무대 테두리 빛, 무대 위 REC 배지, 애니메이션 탭의 빨간 점 */
 .canvas-frame.recording{border-radius:6px;animation:recGlow 1.2s ease-in-out infinite}
 @keyframes recGlow{0%,100%{box-shadow:0 0 0 3px rgba(233,69,96,.9)}50%{box-shadow:0 0 0 7px rgba(233,69,96,.35)}}
@@ -124,6 +126,10 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
       <button class="btn" id="btnBanyeonpung" title="반연풍: 선택 노드(없으면 전체) 제자리 회전. 첫 클릭 90°, 이후 180°씩">↻ 반연풍</button>
       <div style="width:1px;height:20px;background:#0f3460"></div>
       <button class="btn" id="btnRotate180" title="모든 체인 노드 방향 180° 회전">↻ 180°</button>
+      <div style="width:1px;height:20px;background:#d8dde6"></div>
+      <button class="btn" id="btnAutoRot" title="원진 자동 회전 (단축키 R): 원진이 혼자 돌게 하고, 그동안 상쇠 등 다른 사람을 끌 수 있음. 원진 상태에서만 켜짐">⟳ 원진 자동 회전</button>
+      <button class="btn" id="btnAutoRotDir" title="자동 회전 방향 바꾸기 (단축키 F). 돌던 중이면 치배들이 돌아서서 반대로 돎">↺ 반시계</button>
+      <label class="autorot-speed" title="자동 회전 속도: 한 바퀴 도는 데 걸리는 시간">한 바퀴 <input type="number" id="autoRotPeriod" min="3" max="180" step="1" value="20">초</label>
       <div style="width:1px;height:20px;background:#d8dde6"></div>
       <button class="btn" id="btnConnect" title="선택한 2명 이상을 진형(체인)에 연결. 분리됐던 노드를 다시 진에 이어붙입니다">🔗 연결</button>
       <button class="btn" id="btnDetach" title="선택한 노드를 진형(체인)에서 분리. 분리된 노드는 개별 이동 가능">✂ 분리</button>
@@ -324,6 +330,7 @@ function resizeCanvas() {
 }
 
 function initNodes() {
+  if (typeof stopAutoRotate === 'function') stopAutoRotate(true);
   nodes = [];
   snappedCircle = null;
   if (typeof brokenLinks !== 'undefined') brokenLinks.clear();
@@ -1239,7 +1246,8 @@ canvas.addEventListener('mousemove', (e) => {
   if (dragMode === 'individual') {
     nodes[dragNodeIdx].x = pos.x;
     nodes[dragNodeIdx].y = pos.y;
-    snappedCircle = null; // 개별 노드를 옮기면 원진 상태 해제
+    // 원진에 속한 사람을 따로 옮기면 원진 상태 해제 (원 밖 사람, 예: 원 안 상쇠를 옮기는 건 상관없음)
+    if (snappedCircle && snappedCircle.group.includes(dragNodeIdx)) snappedCircle = null;
     // 충돌 해소: 드래그 중인 노드는 고정, 나머지가 밀려남
     resolveCollisions(6, dragNodeIdx);
     draw();
@@ -1507,6 +1515,7 @@ function saveUndo() {
 }
 
 document.getElementById('btnUndo').addEventListener('click', () => {
+  stopAutoRotate(true); // 다른 진형으로 바뀌면 자동 회전은 멈춤
   if (undoStack.length === 0) return;
   nodes = undoStack.pop();
   path = [];
@@ -1600,6 +1609,7 @@ function setGroupCount(g, target) {
     return;
   }
   if (!Number.isFinite(target)) { renderCompositionUI(); return; }
+  stopAutoRotate(true);
   const others = nodes.length - composition[g];
   target = Math.max(G.min, Math.min(target, MAX_TOTAL_NODES - others));
   if (target === composition[g]) { renderCompositionUI(); return; }
@@ -1741,10 +1751,13 @@ function stopRecording() {
 // 드래그 시작 시 호출: 새 클립 시작, 시작 상태 캡처
 function recordClipStart() {
   if (!isRecording) return;
-  if (currentClip) closeSettlingClip(); // 앞 동작(자동 정리 등)이 아직 기록 중이면 먼저 마감
+  // 앞 동작(자동 정리, 자동 회전 등)이 아직 기록 중이면 먼저 마감하고, 새 동작은 거기에 이어진 것으로 표시
+  const joined = !!currentClip;
+  if (currentClip) closeSettlingClip();
   clipStartTime = performance.now();
   lastSnapshotTime = clipStartTime;
   currentClip = { kind: 'drag', frames: [ nodeSnapshot() ], times: [0] };
+  if (joined) currentClip.joined = true;
 }
 
 // 드래그 중 매 이동 시 호출: 프레임 캡처 (과도한 캡처 방지 위해 최소 시간 간격)
@@ -1819,7 +1832,8 @@ function recordWatchTick() {
       // 재생으로 생긴 변화는 기록하지 않음
       watchSig = sig; watchSnap = null;
     } else if (currentClip && currentClip.kind === 'drag' && !currentClip.settling) {
-      // 드래그 중: recordFrame이 기록
+      // 드래그 중: recordFrame이 기록. 마우스가 멈춰 있어도 다른 사람이 움직이면(원진 자동 회전 등) 프레임을 남김
+      if (sig !== watchSig) recordFrame();
       watchSig = sig; watchSnap = null;
     } else if (currentClip) {
       // 변화 클립 기록 중이거나, 드래그를 뗀 뒤 자동 정리를 기다리는 중
@@ -1846,6 +1860,109 @@ function recordWatchTick() {
   requestAnimationFrame(recordWatchTick);
 }
 
+// ─── 원진 자동 회전 ───
+// 원진(원 모양 체인)이 정해 둔 방향·속도로 혼자 돎. 그동안 원 밖 사람(원 안 상쇠 등)은 마우스로 따로 끌 수 있음.
+// 녹화 중이면 감시 루프가 그대로 기록함. 원에서 40px 넘게 벗어난 사람은 회전에서 빠지고, 3명 미만이면 멈춤.
+let autoRot = null;          // { cx, cy, radius, group, turning, last }
+let autoRotDir = -1;         // -1 = 반시계(화면 기준 각도 감소), +1 = 시계
+const AUTO_ROT_TURN_SPEED = 2 * Math.PI; // 돌아설 때 초당 회전량 (반 바퀴 0.5초)
+
+function autoRotPeriodSec() {
+  const v = parseFloat(document.getElementById('autoRotPeriod').value);
+  return Math.max(3, Math.min(180, Number.isFinite(v) ? v : 20));
+}
+function updateAutoRotUI() {
+  document.getElementById('btnAutoRot').classList.toggle('active', !!autoRot);
+  document.getElementById('btnAutoRotDir').textContent = autoRotDir < 0 ? '↺ 반시계' : '↻ 시계';
+}
+// 돌릴 원 찾기: 정리된 원진이 있으면 그 사람들, 없으면 가장 긴 체인 조각이 원에 가까우면 그대로
+function findRotatableCircle() {
+  let group = snappedCircle ? snappedCircle.group.slice() : null;
+  if (!group) {
+    const segs = getChainSegments().filter(sg => sg.length >= 3).sort((a, b) => b.length - a.length);
+    group = segs[0] || null;
+  }
+  if (!group || group.length < 3) return null;
+  let cx = 0, cy = 0;
+  for (const i of group) { cx += nodes[i].x; cy += nodes[i].y; }
+  cx /= group.length; cy /= group.length;
+  const rs = group.map(i => Math.hypot(nodes[i].x - cx, nodes[i].y - cy));
+  const radius = rs.reduce((a, b) => a + b, 0) / rs.length;
+  if (radius < 20) return null;
+  const sd = Math.sqrt(rs.reduce((a, b) => a + (b - radius) ** 2, 0) / rs.length);
+  if (sd / radius > 0.2) return null;
+  // 기본 방향: 체인이 걸어가는 방향(꼬리 → 머리)
+  let angleSum = 0;
+  for (let k = 1; k < group.length; k++) {
+    const a0 = Math.atan2(nodes[group[k - 1]].y - cy, nodes[group[k - 1]].x - cx);
+    const a1 = Math.atan2(nodes[group[k]].y - cy, nodes[group[k]].x - cx);
+    angleSum += normAngle(a1 - a0);
+  }
+  const walkDir = angleSum >= 0 ? -1 : 1;
+  return { cx, cy, radius, group, walkDir };
+}
+function startAutoRotate() {
+  if (isPlaying) { showToast('재생 중에는 자동 회전을 켤 수 없습니다'); return; }
+  const c = findRotatableCircle();
+  if (!c) { showToast('원진 상태에서만 자동 회전할 수 있습니다. 먼저 원을 그려 원진을 만드세요'); return; }
+  autoRotDir = c.walkDir;
+  autoRot = { cx: c.cx, cy: c.cy, radius: c.radius, group: c.group, turning: true, last: performance.now() };
+  updateAutoRotUI();
+  showToast(`원진 자동 회전 — ${autoRotDir < 0 ? '반시계' : '시계'}, 한 바퀴 ${autoRotPeriodSec()}초 (R 끄기 · F 방향 바꾸기)`);
+  requestAnimationFrame(autoRotTick);
+}
+function stopAutoRotate(silent) {
+  if (!autoRot) return;
+  autoRot = null;
+  if (typeof document !== 'undefined' && document.getElementById('btnAutoRot')) updateAutoRotUI();
+  if (!silent) showToast('원진 자동 회전 멈춤');
+}
+function flipAutoRotate() {
+  autoRotDir = -autoRotDir;
+  if (autoRot) autoRot.turning = true; // 치배들이 돌아선 뒤 반대로
+  updateAutoRotUI();
+  showToast(`자동 회전 방향: ${autoRotDir < 0 ? '반시계' : '시계'}`);
+}
+function autoRotTick(now) {
+  if (!autoRot) return;
+  if (isPlaying) { stopAutoRotate(true); return; }
+  const R = autoRot;
+  const dt = Math.min(0.05, Math.max(0, (now - R.last) / 1000));
+  R.last = now;
+  // 원에서 벗어난 사람(따로 끌었거나 다른 진형으로 바뀜)은 회전에서 뺌
+  R.group = R.group.filter(i => i < nodes.length && Math.abs(Math.hypot(nodes[i].x - R.cx, nodes[i].y - R.cy) - R.radius) <= 40);
+  if (R.group.length < 3) { stopAutoRotate(); draw(); return; }
+  const w = autoRotDir * 2 * Math.PI / autoRotPeriodSec();
+  if (R.turning) {
+    // 걸어갈 방향(원의 접선)으로 먼저 돌아섬. 다 돌아서면 걷기 시작
+    let done = true;
+    for (const i of R.group) {
+      const n = nodes[i];
+      const a = Math.atan2(n.y - R.cy, n.x - R.cx);
+      const target = a + autoRotDir * Math.PI / 2;
+      const diff = normAngle(target - n.heading);
+      const step = AUTO_ROT_TURN_SPEED * dt;
+      if (Math.abs(diff) > step) { n.heading += Math.sign(diff) * step; done = false; }
+      else n.heading += diff;
+    }
+    if (done) R.turning = false;
+  } else {
+    const d = w * dt, cos = Math.cos(d), sin = Math.sin(d);
+    for (const i of R.group) {
+      const n = nodes[i];
+      const rx = n.x - R.cx, ry = n.y - R.cy;
+      n.x = R.cx + rx * cos - ry * sin;
+      n.y = R.cy + rx * sin + ry * cos;
+      n.heading += d; // 반연풍 등으로 바꾼 방향은 그대로 두고 회전량만 더함
+    }
+  }
+  if (snappedCircle) { snappedCircle.cx = R.cx; snappedCircle.cy = R.cy; }
+  draw();
+  requestAnimationFrame(autoRotTick);
+}
+document.getElementById('btnAutoRot').addEventListener('click', () => { autoRot ? stopAutoRotate() : startAutoRotate(); });
+document.getElementById('btnAutoRotDir').addEventListener('click', flipAutoRotate);
+
 // 캔버스 크기가 바뀌어 노드가 평행이동될 때, 녹화된 동작도 같이 옮김 (재생 위치가 어긋나지 않게)
 function shiftRecording(dx, dy) {
   const shift = snap => { if (snap) for (const s of snap) { s.x += dx; s.y += dy; } };
@@ -1853,6 +1970,8 @@ function shiftRecording(dx, dy) {
   if (currentClip) currentClip.frames.forEach(shift);
   shift(watchSnap);
   if (watchSig !== null) watchSig = stateSig();
+  if (snappedCircle) { snappedCircle.cx += dx; snappedCircle.cy += dy; }
+  if (autoRot) { autoRot.cx += dx; autoRot.cy += dy; }
 }
 
 // 최소 간격: 노드끼리 물리적으로 겹치지 않는 최소 중심 간 거리
@@ -2048,6 +2167,7 @@ function isCircleSnappable(groupOverride) {
 // 화살표는 축 방향만 지정(상쇠 위치를 옮기지 않음). 
 // 두 줄(상쇠 줄 0~mid, 막쇠 줄 mid~N-1)이 교차하지 않게 좌우 배치를 원진 감김방향으로 결정.
 function animateToShibiljajin(axisX, axisY) {
+  stopAutoRotate(true); // 다른 진형으로 바뀌면 자동 회전은 멈춤
   const cx = stageW / 2, cy = stageH / 2;
   const n = nodeCount;
 
@@ -2678,6 +2798,7 @@ function renderKeyframes() {
 }
 
 function loadKeyframe(idx) {
+  stopAutoRotate(true); // 다른 진형으로 바뀌면 자동 회전은 멈춤
   if (idx < 0 || idx >= keyframes.length) return;
   const kf = keyframes[idx];
   for (let i = 0; i < Math.min(nodes.length, kf.nodes.length); i++) {
@@ -2708,6 +2829,7 @@ function showCoords(idx) {
 function playRecordedClips() {
   if (recordedClips.length === 0) { showToast('녹화된 동작이 없습니다.'); return; }
   if (isPlaying) { stopPlayback(); return; }
+  stopAutoRotate(true);
   isPlaying = true;
   const btn = document.getElementById('btnPlayback');
   btn.textContent = '⏹ 정지';
@@ -2740,7 +2862,8 @@ function playRecordedClips() {
       if (clipIdx >= recordedClips.length) { stopPlayback(); return; }
       applySnapshot(recordedClips[clipIdx].frames[0]);
       draw();
-      playTimer = setTimeout(tick, CLIP_GAP_MS);
+      // 앞 동작에 바로 이어 녹화된 동작(joined)은 멈추지 않고 이어서 재생
+      playTimer = setTimeout(tick, recordedClips[clipIdx].joined ? FRAME_MS : CLIP_GAP_MS);
       return;
     }
     applySnapshot(clip.frames[frameIdx]);
@@ -2833,6 +2956,7 @@ document.getElementById('btnPlayAccel').addEventListener('click', () => {
 });
 
 function animateToKeyframe(idx, duration, onDone) {
+  stopAutoRotate(true); // 다른 진형으로 바뀌면 자동 회전은 멈춤
   const kf = keyframes[idx];
   const startPositions = nodes.map(n => ({x: n.x, y: n.y, heading: n.heading, sitting: !!n.sitting}));
   const startTime = performance.now();
@@ -2960,6 +3084,7 @@ function buildRecordFile() {
     current: encodeSnap(lastRecordedFrame() || nodeSnapshot()),
     clips: recordedClips.map((c, i) => ({
       name: `동작 ${i + 1}`,
+      ...(c.joined ? { joined: true } : {}),
       times: c.times || null,
       frames: c.frames.map(encodeSnap),
     })),
@@ -3040,6 +3165,7 @@ function validateRecordFile(data) {
 
 function applyRecordFile(data) {
   if (isPlaying) stopPlayback();
+  stopAutoRotate(true);
   if (isRecording) stopRecording();
   saveUndo();
 
@@ -3055,7 +3181,9 @@ function applyRecordFile(data) {
   recordedClips = data.clips.map(c => {
     const frames = c.frames.map(f => decodeSnap(f, dx, dy));
     const times = (Array.isArray(c.times) && c.times.length === frames.length) ? c.times.slice() : undefined;
-    return times ? { frames, times } : { frames };
+    const clip = times ? { frames, times } : { frames };
+    if (c.joined === true) clip.joined = true;
+    return clip;
   });
 
   // 키프레임 (절대좌표 px/py를 평행이동, 비율좌표는 현재 캔버스 기준으로 재계산)
@@ -3144,6 +3272,8 @@ document.addEventListener('keydown', (e) => {
   const tag = (e.target && e.target.tagName || '').toUpperCase();
   if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ')) { e.preventDefault(); autoRot ? stopAutoRotate() : startAutoRotate(); return; }
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'f' || e.key === 'F' || e.key === 'ㄹ')) { e.preventDefault(); flipAutoRotate(); return; }
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('btnUndo').click(); }
   if (e.ctrlKey && e.key === 's') { e.preventDefault(); document.getElementById('btnSave').click(); }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
@@ -3413,6 +3543,7 @@ function placeNodesOnPath(densePath, headDist, nodeSpacing, count) {
 // 난진 배치. targetIdx 지정 시 그 노드들만, 그 무게중심 기준으로 분산.
 // 미지정 시 전체(상쇠 중앙 고정).
 function arrangeNanjin(targetIdx) {
+  stopAutoRotate(true); // 다른 진형으로 바뀌면 자동 회전은 멈춤
   let cx, cy, indices, anchorIdx = -1;
 
   if (targetIdx && targetIdx.length >= 3) {
