@@ -1949,6 +1949,9 @@ function animateToShibiljajin(axisX, axisY) {
 
   const duration = 1600;
   const startTime = performance.now();
+  // 11자진은 전원을 한 체인(두 줄)으로 다시 세우므로, 끊어 둔 지점도 다시 잇는다
+  // (떨어진 사람을 다시 붙이는 것과 같은 처리. 남겨 두면 줄 사이 연결선이 빠져 보임)
+  brokenLinks.clear();
 
   function step(now) {
     const elapsed = now - startTime;
