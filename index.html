@@ -55,7 +55,11 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 .legend-item{display:flex;align-items:center;gap:3px;font-size:10px;color:#5a6072}
 .legend-dot{width:10px;height:10px;border-radius:50%}
 .mode-indicator{font-size:11px;padding:3px 8px;border-radius:10px;background:#e94560;color:#fff;font-weight:500}
-.playback-controls{display:flex;align-items:center;gap:6px}
+.playback-controls{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.playback-controls .btn{white-space:nowrap}
+.speed-group{display:flex;align-items:center;gap:6px;flex:1 1 100%}
+.speed-group label{white-space:nowrap}
+.speed-group input{flex:1;min-width:0}
 .file-row{display:flex;gap:6px}
 .file-row .btn{flex:1;white-space:nowrap;padding-left:6px;padding-right:6px}
 .speed-display{font-size:11px;color:#5a6072;min-width:30px}
@@ -165,9 +169,11 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
         <button class="btn" id="btnPlayAccel" title="점점 빨라지는 가속 재생">▶▶ 가속</button>
         <button class="btn" id="btnPrev">◀</button>
         <button class="btn" id="btnNext">▶</button>
-        <label style="font-size:11px">속도</label>
-        <input type="range" id="playSpeed" min="200" max="2000" value="800" style="width:60px">
-        <span class="speed-display" id="speedVal">0.8s</span>
+        <span class="speed-group">
+          <label style="font-size:11px">속도</label>
+          <input type="range" id="playSpeed" min="200" max="2000" value="800">
+          <span class="speed-display" id="speedVal">0.8s</span>
+        </span>
       </div>
       <div class="file-row">
         <button class="btn" id="btnSaveFile" title="현재 진형·녹화 동작·키프레임·끊긴 체인을 .json 파일로 저장">💾 파일로 저장</button>
