@@ -84,7 +84,7 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
     <!-- 홈 탭 -->
     <div class="tab-panel active" data-panel="home">
       <label>노드 수</label>
-      <input type="number" id="nodeCount" value="23" min="1" max="50">
+      <input type="number" id="nodeCount" value="20" min="1" max="50">
       <label>간격</label>
       <input type="range" id="spacing" min="30" max="150" value="50">
       <span id="spacingVal" style="font-size:11px;min-width:28px">50</span>
@@ -220,7 +220,9 @@ const INSTRUMENTS = [
   {name:'잡색3', color:'#f1c40f'},
 ];
 
-let nodeCount = 23;
+// 기본 인원: 상쇠~말법고(소고 마지막) 20명. 잡색(21~23번)은 기본으로 넣지 않고, 필요하면 노드 수를 23으로 올림
+const DEFAULT_NODE_COUNT = 20;
+let nodeCount = DEFAULT_NODE_COUNT;
 let spacing = 50;
 
 // ─── 공용 수학 헬퍼 ───
@@ -291,7 +293,7 @@ function initNodes() {
   const cx = stageW / 2;
   const cy = stageH / 2;
 
-  if (nodeCount === 23) {
+  if (nodeCount === DEFAULT_NODE_COUNT) {
     // 원진 프리셋 (고창농악 1마당 원진_1)
     // 상쇠(1번)는 원 중앙에 분리 상태로 배치
     nodes.push({
@@ -302,7 +304,7 @@ function initNodes() {
       sitting: false,
       selected: false,
     });
-    // 나머지 22명이 원을 이룸 (반시계 방향으로 진행, "왼쪽으로 돈다")
+    // 나머지(nodeCount - 1)명이 원을 이룸 (반시계 방향으로 진행, "왼쪽으로 돈다")
     const idealR = Math.min(stageW, stageH) * 0.36;
     const minR = (nodeCount - 1) * 32 / (2 * Math.PI); // MIN_NODE_GAP 적용
     const radius = Math.max(idealR, minR);
@@ -1464,7 +1466,7 @@ document.getElementById('nodeCount').addEventListener('change', (e) => {
     showToast('녹화 중에는 인원을 바꿀 수 없습니다. 녹화를 멈춘 뒤 바꾸세요');
     return;
   }
-  const newCount = Math.max(1, Math.min(50, parseInt(e.target.value) || 23));
+  const newCount = Math.max(1, Math.min(50, parseInt(e.target.value) || DEFAULT_NODE_COUNT));
   e.target.value = newCount;
   resizeNodeCount(newCount);
   path = [];
@@ -3437,7 +3439,7 @@ draw();
 requestAnimationFrame(recordWatchTick);
 
 // 난진 1장만 — 사용자 요청: "난진을 그려라"
-if (nodeCount === 23) {
+if (nodeCount === DEFAULT_NODE_COUNT) {
   arrangeNanjin();
   draw();
   saveKeyframe('난진 (어름굿)');
