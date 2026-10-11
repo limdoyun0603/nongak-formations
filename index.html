@@ -139,7 +139,7 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 
 <div class="main-area">
   <div class="stage-container">
-    <div class="stage-label">▲ 무대 뒤에서</div>
+    <div class="stage-label">▲ 청중</div>
     <div class="stage-wrapper">
       <div class="canvas-frame" id="canvasFrame">
         <canvas id="stage"></canvas>
@@ -153,7 +153,7 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
         </div>
       </div>
     </div>
-    <div class="stage-label">▼ 청중</div>
+    <div class="stage-label">▼ 무대 뒤에서</div>
   </div>
 
   <div class="sidebar">
@@ -321,7 +321,7 @@ function initNodes() {
     nodes.push({
       x: cx,
       y: cy,
-      heading: Math.PI / 2, // 청중 방향
+      heading: -Math.PI / 2, // 청중 방향 (화면 위쪽)
       detached: true,
       sitting: false,
       selected: false,
@@ -330,7 +330,7 @@ function initNodes() {
     const idealR = Math.min(stageW, stageH) * 0.36;
     const minR = (ring - 1) * 32 / (2 * Math.PI); // MIN_NODE_GAP 적용
     const radius = Math.max(idealR, minR);
-    // 시작 각도: 12시 방향에서 약간 오른쪽 (2번이 무대 뒤쪽 약간 우측)
+    // 시작 각도: 12시 방향(청중 쪽)에서 약간 오른쪽
     const startAngle = -Math.PI / 2 + 0.35;
     for (let i = 1; i < ring; i++) {
       // 시계방향 배치 (번호 순서대로 오른쪽으로 내려가며 돌아옴)
@@ -351,7 +351,7 @@ function initNodes() {
       nodes.push({
         x: cx + radius * 0.55 * Math.cos(a),
         y: cy + radius * 0.55 * Math.sin(a),
-        heading: Math.PI / 2,
+        heading: -Math.PI / 2, // 청중 쪽
         detached: true,
         sitting: false,
         selected: false,
@@ -3352,7 +3352,7 @@ function arrangeNanjin(targetIdx) {
     // 전체: 상쇠 중앙
     cx = stageW / 2; cy = stageH / 2;
     nodes[0].x = cx; nodes[0].y = cy;
-    nodes[0].heading = Math.PI / 2;
+    nodes[0].heading = -Math.PI / 2; // 청중 쪽(화면 위)
     nodes[0].detached = false;
     anchorIdx = 0;
     indices = [];
