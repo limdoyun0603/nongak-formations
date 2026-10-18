@@ -2007,7 +2007,8 @@ function autoRotProcessJoins(R) {
       // 닫힌 원: 사람 사이 간격(호의 길이)은 그대로, 원을 키워 M명을 고르게
       st = 2 * Math.PI / M;
       const arc = R.radius * (closedRing ? 2 * Math.PI / old.length : step);
-      radius = Math.min(M * arc / (2 * Math.PI), Math.min(stageW, stageH) * 0.46);
+      // 무대가 작으면 무대 짧은 변의 0.46배까지만 키움 (원래보다 작게 줄이지는 않음, 대신 간격이 조금 좁아짐)
+      radius = Math.max(R.radius, Math.min(M * arc / (2 * Math.PI), Math.min(stageW, stageH) * 0.46));
     }
     L.forEach((i, k) => { target[i] = ang[head] + c * (k - iH) * st; });
   }
