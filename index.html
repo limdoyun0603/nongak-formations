@@ -2089,6 +2089,10 @@ function autoRotUpdateSnakes(R, dt) {
       }
     }
     if (handed) { sn.followers.splice(0, handed); sn.s.splice(0, handed); sn.offs.splice(0, handed); }
+    if (!sn.followers.length && sn.mendAfter) {
+      const [a, b2] = sn.mendAfter;
+      brokenLinks.delete(Math.min(a, b2) + '-' + Math.max(a, b2));
+    }
   }
   R.snakes = R.snakes.filter(sn => sn.followers.length);
 }
@@ -2124,6 +2128,7 @@ function autoRotProcessJoins(R) {
   headJ.forEach(i => { target[i] = ang[head] - c * (L.indexOf(head) - L.indexOf(i)) * step; });
   tailJ.forEach(i => { target[i] = ang[tail] + c * (L.indexOf(i) - L.indexOf(tail)) * step; });
   // 가운데 빈자리로 돌아온 사람: 양옆 사이에 고르게
+  const midRuns = [];
   for (let k = 1; k < old.length; k++) {
     const pp = old[k - 1], q = old[k];
     const run = L.filter(i => i > pp && i < q);
@@ -2131,6 +2136,7 @@ function autoRotProcessJoins(R) {
     const gap = mod2pi(c * (ang[q] - ang[pp]));
     if (gap < (run.length + 1) * step * 0.75) respace = true;
     run.forEach((i, m) => { target[i] = ang[pp] + c * gap * (m + 1) / (run.length + 1); });
+    midRuns.push({ pp, q, run, sub: gap / (run.length + 1) });
   }
 
   let radius = R.radius;
@@ -2148,19 +2154,36 @@ function autoRotProcessJoins(R) {
     L.forEach((i, k) => { target[i] = ang[head] + c * (k - iH) * st; });
   }
 
-  // 걸어가는 방향으로 뒤쪽에 2명 이상 줄지어 붙으면, 맨 앞사람이 자리로 가고 나머지는 그 발자취를 따라 들어옴
-  const headFirst = autoRotDir === -c; // 머리가 앞장서서 걷는 중
-  const behind = headFirst ? tailJ : headJ.slice().reverse(); // 원진에 가까운 사람부터
-  let snakeFollowers = [];
-  if (!respace && behind.length >= 2) {
-    const leader = behind[0];
-    snakeFollowers = behind.slice(1);
-    const trail = [...snakeFollowers].reverse().map(i => ({ x: nodes[i].x, y: nodes[i].y }));
+  // 줄지어 합류: 걸어가는 방향으로 뒤쪽에 2명 이상이 이어 붙으면, 원진에 닿는 사람이 앞장서 자리로 가고
+  // 나머지는 그 발자취를 따라 들어옴. side = +1이면 뒷사람 자리가 앞사람보다 번호 진행 방향(c) 쪽.
+  // 뒷사람이 앞사람의 '뒤'(걷는 방향 반대)에 서게 될 때만 줄지어 들어오고, 아니면 각자 자리로 걸어감.
+  const snakeFollowers = [];
+  const trailsBehind = sd => c * sd === -autoRotDir;
+  const addSnake = (chainFromRing, side, stepX, mendAfter) => {
+    const leader = chainFromRing[0], fol = chainFromRing.slice(1);
+    const trail = [...fol].reverse().map(i => ({ x: nodes[i].x, y: nodes[i].y }));
     trail.push({ x: nodes[leader].x, y: nodes[leader].y });
-    const s = [];
+    const sArr = [];
     let acc = 0, prevI = leader;
-    for (const i of snakeFollowers) { acc += Math.hypot(nodes[i].x - nodes[prevI].x, nodes[i].y - nodes[prevI].y); s.push(acc); prevI = i; }
-    R.snakes.push({ leader, followers: snakeFollowers.slice(), offs: snakeFollowers.map((_, k) => k + 1), side: headFirst ? 1 : -1, trail, s, step });
+    for (const i of fol) { acc += Math.hypot(nodes[i].x - nodes[prevI].x, nodes[i].y - nodes[prevI].y); sArr.push(acc); prevI = i; }
+    R.snakes.push({ leader, followers: fol.slice(), offs: fol.map((_, k) => k + 1), side, trail, s: sArr, step: stepX, mendAfter });
+    fol.forEach(i => snakeFollowers.push(i));
+  };
+  if (!respace) {
+    // 끝에 붙은 무리 (꼬리 뒤 / 머리 앞)
+    if (tailJ.length >= 2 && trailsBehind(1)) addSnake(tailJ, 1, step, null);
+    if (headJ.length >= 2 && trailsBehind(-1)) addSnake(headJ.slice().reverse(), -1, step, null);
+    // 가운데 빈자리로 돌아온 무리: 한쪽 끝만 원진에 이어졌으면 그쪽 사람이 앞장섬.
+    // 다 들어오면 반대쪽 끊긴 자리도 이어 원래 한 줄로 되돌림
+    const ch = getChainIndices();
+    const linked = (a, b) => Math.abs(ch.indexOf(a) - ch.indexOf(b)) === 1 && !brokenLinks.has(Math.min(a, b) + '-' + Math.max(a, b));
+    for (const mr of midRuns) {
+      if (mr.run.length < 2) continue;
+      const first = mr.run[0], last = mr.run[mr.run.length - 1];
+      const atP = linked(mr.pp, first), atQ = linked(last, mr.q);
+      if (atP && !atQ && trailsBehind(1)) addSnake(mr.run, 1, mr.sub, [last, mr.q]);
+      else if (atQ && !atP && trailsBehind(-1)) addSnake(mr.run.slice().reverse(), -1, mr.sub, [mr.pp, first]);
+    }
   }
   for (const i of L) {
     if (target[i] === undefined || snakeFollowers.includes(i)) continue;
