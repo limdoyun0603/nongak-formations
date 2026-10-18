@@ -279,6 +279,16 @@ function normAngle(d) {
 }
 let nodes = [];
 let path = [];
+// 뱀 따라가기에서 각 사람이 머리로부터 떨어진 거리(경로 길이). 드래그 시작 때의 실제 간격에서 출발해
+// 머리가 움직이는 만큼 조금씩 간격 슬라이더 값으로 다가감 (끌자마자 뒷사람들이 순간이동하지 않게)
+let dragDist = null;
+function initDragDist() {
+  dragDist = [0];
+  for (let i = 1; i < dragChainOrder.length; i++) {
+    const a = nodes[dragChainOrder[i - 1]], b = nodes[dragChainOrder[i]];
+    dragDist.push(dragDist[i - 1] + Math.hypot(a.x - b.x, a.y - b.y));
+  }
+}
 let keyframes = [];
 let activeKeyframe = -1;
 let dragNodeIdx = -1;
@@ -795,11 +805,24 @@ function getPointAtDistance(pts, dist) {
 
 function updateNodesFromPath() {
   if (path.length === 0 || dragChainOrder.length === 0) return;
+  const useDist = dragDist && dragDist.length === dragChainOrder.length;
+  if (useDist && path.length >= 2) {
+    // 사람 사이 간격 하나하나를 머리가 움직인 거리의 15%까지만 슬라이더 간격 쪽으로 바꿈 (뒷사람일수록 몰려서 튀지 않게)
+    const a = path[path.length - 1], b = path[path.length - 2];
+    const lim = Math.hypot(a.x - b.x, a.y - b.y) * 0.15;
+    let prevOld = 0, acc = 0;
+    for (let i = 1; i < dragDist.length; i++) {
+      const gap = dragDist[i] - prevOld;
+      prevOld = dragDist[i];
+      acc += gap + Math.max(-lim, Math.min(lim, spacing - gap));
+      dragDist[i] = acc;
+    }
+  }
   // 각 노드를 경로 상 위치에 배치 + 접선 방향 기록
   const tangents = {}; // nodeIdx → 접선 각도
   for (let i = 0; i < dragChainOrder.length; i++) {
     const nodeIdx = dragChainOrder[i];
-    const pt = getPointAtDistance(path, i * spacing);
+    const pt = getPointAtDistance(path, useDist ? dragDist[i] : i * spacing);
     if (pt) {
       const oldX = nodes[nodeIdx].x;
       const oldY = nodes[nodeIdx].y;
@@ -1180,8 +1203,10 @@ canvas.addEventListener('mousedown', (e) => {
     for (let i = segment.length - 1; i >= 0; i--) {
       path.push({x: nodes[segment[i]].x, y: nodes[segment[i]].y});
     }
+    initDragDist();
     dragStartPos = { x: pos.x, y: pos.y };
-    stickyActive = (snappedCircle !== null);
+    // 원진 궤도 회전은 원진 전체를 잡았을 때만 (끊어 낸 일부만 끌면 그 사람들만 따라감)
+    stickyActive = (snappedCircle !== null && snappedCircle.group.every(i => segment.includes(i)));
     stickyLastTheta = null;
     canvas.style.cursor = 'grabbing';
   } else if (hoveredIdx === tailIdx) {
@@ -1192,8 +1217,9 @@ canvas.addEventListener('mousedown', (e) => {
     for (let i = 0; i < segment.length; i++) {
       path.push({x: nodes[segment[i]].x, y: nodes[segment[i]].y});
     }
+    initDragDist();
     dragStartPos = { x: pos.x, y: pos.y };
-    stickyActive = (snappedCircle !== null);
+    stickyActive = (snappedCircle !== null && snappedCircle.group.every(i => segment.includes(i)));
     stickyLastTheta = null;
     canvas.style.cursor = 'grabbing';
   } else {
@@ -1289,8 +1315,8 @@ canvas.addEventListener('mousemove', (e) => {
     const last = path[path.length - 1];
     const dx = pos.x - last.x;
     const dy = pos.y - last.y;
-    // 자동 회전 중인 원진을 끌고 나가면 자동 회전은 멈춤 (뱀 따라가기와 서로 부딪히지 않게)
-    if (autoRot && (dx*dx + dy*dy > 9) && dragChainOrder.some(i => autoRot.group.includes(i))) stopAutoRotate();
+    // 자동 회전 중인 원진에서 끌고 나간 사람들만 회전에서 빠짐. 나머지는 계속 돎 (뒷사람이 빠져도 앞사람은 계속 걸음)
+    if (autoRot && (dx*dx + dy*dy > 9)) autoRotRelease(dragChainOrder);
     if (dx*dx + dy*dy > 9) {
       path.push({x: pos.x, y: pos.y});
       updateNodesFromPath();
@@ -1386,7 +1412,10 @@ canvas.addEventListener('mouseup', (e) => {
   justEscaped = false;
   liveOrbit = null;
   canvas.style.cursor = 'default';
-  if (wasChain && wasSticky) {
+  dragDist = null;
+  if (wasChain && autoRot && autoRotTryMerge(draggedSeg)) {
+    // 자동 회전 중인 원진 끝에 다시 붙음 → 회전 대열 합류 (자동 정리 안 함)
+  } else if (wasChain && wasSticky) {
     // 회전만 함: 원진 상태(snappedCircle) 그대로 유지 — 별도 처리 없음
   } else if (wasChain && !wasJustEscaped && autoSnapEnabled && draggedSeg.length >= 5 && isCircleSnappable(draggedSeg)) {
     snapToCircle(draggedSeg);
@@ -1468,12 +1497,14 @@ canvas.addEventListener('touchstart', (e) => {
     dragChainOrder = chain;
     path = [];
     for (let i = chain.length - 1; i >= 0; i--) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+    initDragDist();
   } else if (hoveredIdx === tailIdx) {
     saveUndo();
     dragMode = 'chain';
     dragChainOrder = chain.slice().reverse();
     path = [];
     for (let i = 0; i < chain.length; i++) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
+    initDragDist();
   } else {
     dragMode = null;
   }
@@ -1492,8 +1523,8 @@ canvas.addEventListener('touchmove', (e) => {
     const last = path[path.length - 1];
     const dx = pos.x - last.x;
     const dy = pos.y - last.y;
-    // 자동 회전 중인 원진을 끌고 나가면 자동 회전은 멈춤 (뱀 따라가기와 서로 부딪히지 않게)
-    if (autoRot && (dx*dx + dy*dy > 9) && dragChainOrder.some(i => autoRot.group.includes(i))) stopAutoRotate();
+    // 자동 회전 중인 원진에서 끌고 나간 사람들만 회전에서 빠짐. 나머지는 계속 돎 (뒷사람이 빠져도 앞사람은 계속 걸음)
+    if (autoRot && (dx*dx + dy*dy > 9)) autoRotRelease(dragChainOrder);
     if (dx*dx + dy*dy > 9) {
       path.push({x: pos.x, y: pos.y});
       updateNodesFromPath();
@@ -1930,7 +1961,9 @@ function startAutoRotate() {
     turnSet: new Set(),   // 새로 합류해 아직 걸어갈 방향으로 돌아서는 중인 사람
     ease: new Map(),      // 자리로 옮겨 가는 중인 사람: idx → { dA, dR, left(ms) }
     segPrev: autoRotSegmentSet(c.group),
-    forceJoin: new Set() }; // 🔗 연결로 붙인 사람 (원래 같은 조각에 있었어도 합류시킴)
+    forceJoin: new Set(),  // 🔗 연결로 붙인 사람 (원래 같은 조각에 있었어도 합류시킴)
+    snakes: [],            // 줄지어 합류 중인 무리: { leader, followers, side, trail, s, step }
+    snap: (snappedCircle && c.group.every(i => snappedCircle.group.includes(i))) ? snappedCircle : null };
   updateAutoRotUI();
   showToast(`원진 자동 회전 — ${autoRotDir < 0 ? '반시계' : '시계'}, 한 바퀴 ${autoRotPeriodSec()}초 (R 끄기 · F 방향 바꾸기)`);
   requestAnimationFrame(autoRotTick);
@@ -1943,7 +1976,7 @@ function stopAutoRotate(silent) {
 }
 function flipAutoRotate() {
   autoRotDir = -autoRotDir;
-  if (autoRot) autoRot.turning = true; // 치배들이 돌아선 뒤 반대로
+  if (autoRot) { autoRot.turning = true; autoRotFinishSnakes(autoRot); } // 치배들이 돌아선 뒤 반대로
   updateAutoRotUI();
   showToast(`자동 회전 방향: ${autoRotDir < 0 ? '반시계' : '시계'}`);
 }
@@ -1958,6 +1991,108 @@ function autoRotSegmentSet(group) {
 // 끝에 붙으면 그 끝 바깥으로 한 칸, 가운데 빈자리면 양옆 사이로. 원이 닫혀 있어 자리가 모자라면
 // 사람 사이 간격은 그대로 두고 원을 조금 키워 전원을 고르게 다시 세움. 0.6초에 걸쳐 자리로 옮겨 감.
 const AUTO_ROT_JOIN_MS = 600;
+const AUTO_ROT_WALK_PX_PER_MS = 0.15; // 합류하러 걸어가는 속도 (초당 150px)
+
+// 지금 원진의 각도 간격: 번호상 이웃끼리 각도 차의 중앙값
+function autoRotStep(R, group) {
+  const g = (group || R.group).slice().sort((a, b) => a - b);
+  const ang = i => Math.atan2(nodes[i].y - R.cy, nodes[i].x - R.cx);
+  const gaps = [];
+  for (let k = 1; k < g.length; k++) gaps.push(Math.abs(normAngle(ang(g[k]) - ang(g[k - 1]))));
+  gaps.sort((a, b) => a - b);
+  return gaps[Math.floor(gaps.length / 2)] || (2 * Math.PI / Math.max(3, g.length));
+}
+
+function autoRotSetEase(R, i, targetA, targetR) {
+  const n = nodes[i];
+  const a = Math.atan2(n.y - R.cy, n.x - R.cx), rr = Math.hypot(n.x - R.cx, n.y - R.cy);
+  const tx = R.cx + targetR * Math.cos(targetA), ty = R.cy + targetR * Math.sin(targetA);
+  const T = Math.max(AUTO_ROT_JOIN_MS, Math.hypot(tx - n.x, ty - n.y) / AUTO_ROT_WALK_PX_PER_MS);
+  R.ease.set(i, { dA: normAngle(targetA - a), dR: targetR - rr, left: T, T });
+}
+
+// 끌고 나간 사람들을 회전에서 뺌 (줄지어 합류 중이던 무리도 정리). 3명 미만이 남으면 멈춤
+function autoRotRelease(idxs) {
+  const R = autoRot;
+  if (!R || !idxs.some(i => R.group.includes(i) || R.snakes.some(sn => sn.leader === i || sn.followers.includes(i)))) return;
+  const out = new Set(idxs);
+  R.group = R.group.filter(i => !out.has(i));
+  for (const i of out) { R.ease.delete(i); R.turnSet.delete(i); }
+  R.snakes = R.snakes.filter(sn => !out.has(sn.leader));
+  for (const sn of R.snakes) {
+    const k = sn.followers.findIndex(i => out.has(i));
+    if (k >= 0) { sn.followers.length = k; sn.s.length = k; sn.offs.length = k; }
+  }
+  if (R.group.length < 3) stopAutoRotate();
+}
+
+// 놓은 체인 조각의 끝이 회전 중인 원진의 끝(끊었던 자리) 가까이면 다시 이어 붙임
+function autoRotTryMerge(seg) {
+  const R = autoRot;
+  if (!R || !seg.length) return false;
+  const chain = getChainIndices();
+  const lo = Math.min(...seg), hi = Math.max(...seg);
+  const prev = chain[chain.indexOf(lo) - 1], next = chain[chain.indexOf(hi) + 1];
+  const arc = R.radius * autoRotStep(R);
+  const thr = Math.max(spacing * 1.8, arc * 1.3);
+  const near = (a, b) => Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y) < thr;
+  let merged = false;
+  if (prev !== undefined && R.group.includes(prev) && brokenLinks.has(prev + '-' + lo) && near(prev, lo)) { brokenLinks.delete(prev + '-' + lo); merged = true; }
+  if (next !== undefined && R.group.includes(next) && brokenLinks.has(hi + '-' + next) && near(hi, next)) { brokenLinks.delete(hi + '-' + next); merged = true; }
+  return merged;
+}
+
+// 줄지어 합류 중인 무리를 바로 자리로 보냄 (방향을 바꿀 때 등)
+function autoRotFinishSnakes(R) {
+  for (const sn of R.snakes) {
+    const la = Math.atan2(nodes[sn.leader].y - R.cy, nodes[sn.leader].x - R.cx);
+    sn.followers.forEach((i, k) => {
+      autoRotSetEase(R, i, la + sn.side * R.chainSign * sn.offs[k] * sn.step, R.radius);
+      R.group.push(i); R.turnSet.add(i);
+    });
+  }
+  R.snakes = [];
+}
+
+// 줄지어 합류: 맨 앞사람(원진에 닿는 사람)이 자리로 걸어가 원진을 따라 돌고, 뒷사람들은 그 발자취를 그대로 밟아
+// 원진에 들어선 뒤 자기 자리에서 회전 대열에 넘겨짐
+function autoRotUpdateSnakes(R, dt) {
+  for (const sn of R.snakes) {
+    const L = nodes[sn.leader];
+    const last = sn.trail[sn.trail.length - 1];
+    if (Math.hypot(L.x - last.x, L.y - last.y) > 0.8) sn.trail.push({ x: L.x, y: L.y });
+    const d = R.radius * sn.step; // 원진 위 사람 사이 간격
+    // 발자취가 너무 길면 앞부분(오래된 쪽)을 잘라냄
+    let total = 0;
+    for (let k = sn.trail.length - 1; k > 0; k--) {
+      total += Math.hypot(sn.trail[k].x - sn.trail[k - 1].x, sn.trail[k].y - sn.trail[k - 1].y);
+      if (total > (sn.followers.length + 2) * Math.max(d, ...sn.s) + 100) { sn.trail.splice(0, k - 1); break; }
+    }
+    const leaderSettled = !R.ease.has(sn.leader) && R.group.includes(sn.leader);
+    const la = Math.atan2(L.y - R.cy, L.x - R.cx);
+    let handed = 0;
+    for (let k = 0; k < sn.followers.length; k++) {
+      const i = sn.followers[k], n = nodes[i];
+      const D = sn.offs[k] * d; // 맨 앞사람에게서 몇 번째 뒤인지 × 간격
+      sn.s[k] += Math.max(-60 * dt, Math.min(60 * dt, D - sn.s[k])); // 간격은 천천히 맞춤
+      const pt = getPointAtDistance(sn.trail, sn.s[k]);
+      if (!pt) continue;
+      const mx = pt.x - n.x, my = pt.y - n.y;
+      if (mx * mx + my * my > 0.25) n.heading = Math.atan2(my, mx);
+      n.x = pt.x; n.y = pt.y;
+      // 원진 위 자기 자리에 닿았고 앞사람이 이미 넘겨졌으면 회전 대열로
+      if (leaderSettled && handed === k && Math.abs(Math.hypot(n.x - R.cx, n.y - R.cy) - R.radius) < 3 && Math.abs(sn.s[k] - D) < 3) {
+        const ta = la + sn.side * R.chainSign * sn.offs[k] * sn.step;
+        n.x = R.cx + R.radius * Math.cos(ta); n.y = R.cy + R.radius * Math.sin(ta);
+        R.group.push(i); R.turnSet.add(i);
+        handed++;
+      }
+    }
+    if (handed) { sn.followers.splice(0, handed); sn.s.splice(0, handed); sn.offs.splice(0, handed); }
+  }
+  R.snakes = R.snakes.filter(sn => sn.followers.length);
+}
+
 function autoRotProcessJoins(R) {
   const seg = autoRotSegmentSet(R.group);
   const joiners = [...seg].filter(i => (!R.segPrev.has(i) || R.forceJoin.has(i)) && !R.group.includes(i));
@@ -2013,15 +2148,27 @@ function autoRotProcessJoins(R) {
     L.forEach((i, k) => { target[i] = ang[head] + c * (k - iH) * st; });
   }
 
-  for (const i of L) {
-    if (target[i] === undefined) continue;
-    const pp = polar(i);
-    R.ease.set(i, { dA: normAngle(target[i] - pp.a), dR: radius - pp.r, left: AUTO_ROT_JOIN_MS });
+  // 걸어가는 방향으로 뒤쪽에 2명 이상 줄지어 붙으면, 맨 앞사람이 자리로 가고 나머지는 그 발자취를 따라 들어옴
+  const headFirst = autoRotDir === -c; // 머리가 앞장서서 걷는 중
+  const behind = headFirst ? tailJ : headJ.slice().reverse(); // 원진에 가까운 사람부터
+  let snakeFollowers = [];
+  if (!respace && behind.length >= 2) {
+    const leader = behind[0];
+    snakeFollowers = behind.slice(1);
+    const trail = [...snakeFollowers].reverse().map(i => ({ x: nodes[i].x, y: nodes[i].y }));
+    trail.push({ x: nodes[leader].x, y: nodes[leader].y });
+    const s = [];
+    let acc = 0, prevI = leader;
+    for (const i of snakeFollowers) { acc += Math.hypot(nodes[i].x - nodes[prevI].x, nodes[i].y - nodes[prevI].y); s.push(acc); prevI = i; }
+    R.snakes.push({ leader, followers: snakeFollowers.slice(), offs: snakeFollowers.map((_, k) => k + 1), side: headFirst ? 1 : -1, trail, s, step });
   }
-  joiners.forEach(i => R.turnSet.add(i));
-  R.group = L;
+  for (const i of L) {
+    if (target[i] === undefined || snakeFollowers.includes(i)) continue;
+    autoRotSetEase(R, i, target[i], radius);
+  }
+  joiners.filter(i => !snakeFollowers.includes(i)).forEach(i => R.turnSet.add(i));
+  R.group = L.filter(i => !snakeFollowers.includes(i));
   R.radius = radius;
-  if (snappedCircle) { snappedCircle.group = L.slice(); snappedCircle.radius = radius; }
   showToast(joiners.map(i => getInstrument(i).name).join(', ') + ' — 자동 회전 대열에 합류');
 }
 
@@ -2035,13 +2182,19 @@ function autoRotTick(now) {
   R.group = R.group.filter(i => i < nodes.length && (R.ease.has(i) || Math.abs(Math.hypot(nodes[i].x - R.cx, nodes[i].y - R.cy) - R.radius) <= 40));
   for (const i of [...R.ease.keys()]) if (!R.group.includes(i)) R.ease.delete(i);
   for (const i of [...R.turnSet]) if (!R.group.includes(i)) R.turnSet.delete(i);
+  // 줄지어 합류 중인 무리: 맨 앞사람이 빠졌거나, 뒷사람이 체인에서 떨어졌으면 거기서 끊음
+  R.snakes = R.snakes.filter(sn => R.group.includes(sn.leader));
+  for (const sn of R.snakes) {
+    const k = sn.followers.findIndex(i => nodes[i].detached || !R.segPrev.has(i));
+    if (k >= 0) { sn.followers.length = k; sn.s.length = k; sn.offs.length = k; }
+  }
   if (R.group.length < 3) { stopAutoRotate(); draw(); return; }
   autoRotProcessJoins(R);
   const w = autoRotDir * 2 * Math.PI / autoRotPeriodSec();
   // 합류·재배치: 정해진 자리로 조금씩 (원 중심 기준 각도·반지름)
   for (const [i, e] of R.ease) {
     const ms = Math.min(e.left, dt * 1000);
-    const f = ms / AUTO_ROT_JOIN_MS;
+    const f = ms / (e.T || AUTO_ROT_JOIN_MS);
     e.left -= ms;
     const n = nodes[i];
     const a = Math.atan2(n.y - R.cy, n.x - R.cx) + e.dA * f;
@@ -2082,7 +2235,11 @@ function autoRotTick(now) {
       if (!R.turnSet.has(i)) n.heading += d; // 반연풍 등으로 바꾼 방향은 그대로 두고 회전량만 더함
     }
   }
-  if (snappedCircle) { snappedCircle.cx = R.cx; snappedCircle.cy = R.cy; }
+  autoRotUpdateSnakes(R, dt);
+  if (R.snap && snappedCircle === R.snap) {
+    snappedCircle.cx = R.cx; snappedCircle.cy = R.cy;
+    snappedCircle.group = R.group.slice(); snappedCircle.radius = R.radius;
+  }
   draw();
   requestAnimationFrame(autoRotTick);
 }
