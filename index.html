@@ -78,6 +78,12 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
 @keyframes pulse{0%,100%{background:#c0392b}50%{background:#e94560}}
 .btn.recording{animation:pulse 1s infinite;border-color:#e94560;color:#fff}
 .autorot-speed{font-size:12px;color:#5a6278;display:inline-flex;align-items:center;gap:4px}
+.garak-marks{display:inline-flex;flex-wrap:wrap;gap:4px;font-size:11px;color:#5a6278;align-items:center}
+.garak-marks .mk{display:inline-flex;align-items:center;gap:3px;background:#f1f3f7;border:1px solid #d8dde6;border-radius:10px;padding:1px 4px 1px 8px;font-variant-numeric:tabular-nums}
+.garak-marks .mk button{border:0;background:none;color:#8a90a0;cursor:pointer;font-size:11px;padding:0 3px}
+.garak-marks .mk button:hover{color:#e94560}
+.garak-badge{position:absolute;left:8px;bottom:8px;z-index:22;display:none;background:rgba(26,26,46,.78);color:#fff;font-size:12px;padding:3px 10px;border-radius:12px;pointer-events:none}
+.garak-badge.show{display:block}
 .autorot-speed input{width:48px}
 /* 녹화 중 표시: 무대 테두리 빛, 무대 위 REC 배지, 애니메이션 탭의 빨간 점 */
 .canvas-frame.recording{border-radius:6px;animation:recGlow 1.2s ease-in-out infinite}
@@ -144,6 +150,11 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
       <span style="font-size:11px;color:#7a8296">녹화 중 노드를 드래그하면 그 동작이 그대로 기록됩니다 (드래그마다 하나의 동작)</span>
       <div style="width:1px;height:20px;background:#d8dde6"></div>
       <button class="btn" id="btnSave">💾 키프레임 저장</button>
+      <div style="width:1px;height:20px;background:#d8dde6"></div>
+      <input id="garakInput" list="garakNames" placeholder="가락 이름" title="녹화나 재생 중에 가락이 바뀌는 순간 '가락 표시'(단축키 G)를 누르면 그 시각에 표시됩니다" style="width:120px;padding:4px 6px;font-size:12px">
+      <datalist id="garakNames"></datalist>
+      <button class="btn" id="btnGarakMark" title="녹화나 재생 중 지금 이 순간부터 이 가락 (단축키 G)">🥁 가락 표시</button>
+      <span class="garak-marks" id="garakMarks"></span>
     </div>
 
     <!-- 가락 탭 -->
@@ -165,6 +176,7 @@ canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block
       <div class="canvas-frame" id="canvasFrame">
         <canvas id="stage"></canvas>
         <div class="size-label" id="sizeLabel"></div>
+        <div class="garak-badge" id="garakBadge"></div>
         <div class="rec-badge" id="recBadge"><span class="dot"></span>녹화 중 <span id="recTime">0:00</span><span class="sub" id="recClips"></span></div>
         <div class="ctx-menu" id="ctxMenu">
           <button data-act="selectNode">이 노드만 선택</button>
@@ -1067,6 +1079,8 @@ function tryReattach(nodeIdx) {
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('mousedown', (e) => {
+  // 무대를 누르면 입력칸(가락 이름 등)에서 빠져나와 단축키(R·F·G)가 바로 듣게
+  if (document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) document.activeElement.blur();
   const pos = getMousePos(e);
 
   // 11자진 방향 설정 모드: 두 점 클릭으로 방향선 확정
@@ -1310,6 +1324,7 @@ canvas.addEventListener('mousemove', (e) => {
       snappedCircle = null;
       stickyLastTheta = null;
       justEscaped = true;
+      recordEvent('escape');
       showToast('원진 탈출');
     }
     const last = path[path.length - 1];
@@ -1761,6 +1776,7 @@ function startRecording() {
   recTimer = setInterval(updateRecIndicator, 250);
   // 기존 클립은 지우지 않고 뒤에 이어붙임 (불러온 기록에 이어서 녹화 가능). 삭제는 목록의 ✕로.
   currentClip = null;
+  pendingEvents = [];
   syncWatch();
   const btn = document.getElementById('btnRecord');
   btn.classList.add('recording');
@@ -1773,8 +1789,16 @@ function startRecording() {
 }
 
 function stopRecording() {
-  isRecording = false;
   if (currentClip) { finishClip(); }
+  // 동작 없이 남은 사건은 마지막 동작의 끝에
+  const lastClip = recordedClips[recordedClips.length - 1];
+  if (lastClip && pendingEvents.length) {
+    const end = lastClip.times ? lastClip.times[lastClip.times.length - 1] : 0;
+    lastClip.events = (lastClip.events || []).concat(pendingEvents.map(e => ({ t: end, ...e })));
+  }
+  pendingEvents = [];
+  isRecording = false;
+  renderGarakMarks();
   watchSig = null; watchSnap = null;
   const btn = document.getElementById('btnRecord');
   btn.classList.remove('recording');
@@ -1783,6 +1807,28 @@ function stopRecording() {
   updateRecIndicator();
   showToast(`녹화 종료 — ${recordedClips.length}개 동작 기록됨`);
   renderKeyframes();
+}
+
+// ─── 녹화 중 일어난 일 (사건) ───
+// 동작마다 events: [{ t: 그 동작 안의 ms, type, ...}] 로 남김.
+// type: snap(원진 스냅 완료) · escape(원진 탈출) · rotate-start · rotate-stop · rotate-flip(자동 회전) · garak(가락 바뀜, name)
+// 기록 중인 동작이 없을 때 생긴 일은 다음 동작의 시작(t=0)에, 녹화를 끝낼 때까지 동작이 없으면 마지막 동작의 끝에 붙임
+let pendingEvents = [];
+function recordEvent(type, extra) {
+  if (!isRecording) return;
+  const ev = { type, ...(extra || {}) };
+  if (currentClip) {
+    (currentClip.events = currentClip.events || []).push({ t: Math.round(performance.now() - clipStartTime), ...ev });
+  } else pendingEvents.push(ev);
+}
+function attachPendingEvents() {
+  if (!currentClip || !pendingEvents.length) return;
+  currentClip.events = (currentClip.events || []).concat(pendingEvents.map(e => ({ t: 0, ...e })));
+  pendingEvents = [];
+}
+// 움직임이 없어 버려지는 동작의 사건은 다음 동작으로 넘김
+function keepEventsOf(clip) {
+  if (clip && clip.events && clip.events.length) pendingEvents = clip.events.map(({ t, ...e }) => e).concat(pendingEvents);
 }
 
 // 드래그 시작 시 호출: 새 클립 시작, 시작 상태 캡처
@@ -1795,6 +1841,7 @@ function recordClipStart() {
   lastSnapshotTime = clipStartTime;
   currentClip = { kind: 'drag', frames: [ nodeSnapshot() ], times: [0] };
   if (joined) currentClip.joined = true;
+  attachPendingEvents();
 }
 
 // 드래그 중 매 이동 시 호출: 프레임 캡처 (과도한 캡처 방지 위해 최소 시간 간격)
@@ -1817,7 +1864,7 @@ function finishClip() {
   if (currentClip.frames.length >= 2 && clipHasMotion(currentClip)) {
     recordedClips.push(currentClip);
     renderKeyframes();
-  }
+  } else keepEventsOf(currentClip);
   currentClip = null;
 }
 
@@ -1859,7 +1906,7 @@ function closeSettlingClip() {
   if (clip && clip.frames.length >= 2 && clipHasMotion(clip)) {
     recordedClips.push(clip);
     renderKeyframes();
-  }
+  } else keepEventsOf(clip);
 }
 
 // 드래그를 뗐을 때: 그 순간을 기록하고, 이어지는 자동 정리는 감시 루프가 이어서 기록 후 마감
@@ -1899,6 +1946,7 @@ function recordWatchTick() {
       // 드래그가 아닌 변화가 시작됨 → 직전 상태를 첫 프레임으로 새 클립
       clipStartTime = now - 16;
       currentClip = { kind: 'change', frames: [watchSnap, nodeSnapshot()], times: [0, 16] };
+      attachPendingEvents();
       watchSig = sig;
       lastChangeTime = now;
     } else if (sig !== watchSig || !watchSnap) {
@@ -1965,12 +2013,14 @@ function startAutoRotate() {
     snakes: [],            // 줄지어 합류 중인 무리: { leader, followers, side, trail, s, step }
     snap: (snappedCircle && c.group.every(i => snappedCircle.group.includes(i))) ? snappedCircle : null };
   updateAutoRotUI();
+  recordEvent('rotate-start', { dir: autoRotDir < 0 ? 'ccw' : 'cw', period: autoRotPeriodSec() });
   showToast(`원진 자동 회전 — ${autoRotDir < 0 ? '반시계' : '시계'}, 한 바퀴 ${autoRotPeriodSec()}초 (R 끄기 · F 방향 바꾸기)`);
   requestAnimationFrame(autoRotTick);
 }
 function stopAutoRotate(silent) {
   if (!autoRot) return;
   autoRot = null;
+  recordEvent('rotate-stop');
   if (typeof document !== 'undefined' && document.getElementById('btnAutoRot')) updateAutoRotUI();
   if (!silent) showToast('원진 자동 회전 멈춤');
 }
@@ -1978,6 +2028,7 @@ function flipAutoRotate() {
   autoRotDir = -autoRotDir;
   if (autoRot) { autoRot.turning = true; autoRotFinishSnakes(autoRot); } // 치배들이 돌아선 뒤 반대로
   updateAutoRotUI();
+  if (autoRot) recordEvent('rotate-flip', { dir: autoRotDir < 0 ? 'ccw' : 'cw' });
   showToast(`자동 회전 방향: ${autoRotDir < 0 ? '반시계' : '시계'}`);
 }
 // 회전 중인 사람들이 속한 체인 조각(들)의 전체 인원
@@ -2350,6 +2401,7 @@ function snapToCircle(indicesOverride) {
       document.getElementById('spacingVal').textContent = arcSpacing;
       // sticky 스냅 상태 기록
       snappedCircle = { cx, cy, radius, group: group.slice() };
+      recordEvent('snap', { n: group.length });
       showToast(`원진 스냅 (${group.length}명, 반지름 ${Math.round(radius)}px, 간격 ${arcSpacing}px)`);
     }
   }
@@ -3065,6 +3117,7 @@ document.getElementById('btnClear').addEventListener('click', async () => {
 
 // Keyframes list
 function renderKeyframes() {
+  renderGarakMarks();
   const list = document.getElementById('keyframesList');
   list.innerHTML = '';
   // 녹화된 동작 클립 목록 (있으면 먼저 표시)
@@ -3150,6 +3203,7 @@ function playRecordedClips() {
   const FRAME_MS = 16;      // 시각 정보가 없는 클립의 프레임 간격
   const CLIP_GAP_MS = 500;  // 클립 사이 멈춤
   let clipIdx = 0, frameIdx = 1;
+  playPos = { clip: 0, t: 0 }; updateGarakBadge();
 
   // 녹화된 실제 시각이 있으면 그 간격대로 (드래그 중 멈춘 순간까지 재현)
   function frameDelay(clip, k) {
@@ -3170,17 +3224,88 @@ function playRecordedClips() {
       if (clipIdx >= recordedClips.length) { stopPlayback(); return; }
       applySnapshot(recordedClips[clipIdx].frames[0]);
       draw();
+      playPos = { clip: clipIdx, t: 0 }; updateGarakBadge();
       // 앞 동작에 바로 이어 녹화된 동작(joined)은 멈추지 않고 이어서 재생
       playTimer = setTimeout(tick, recordedClips[clipIdx].joined ? FRAME_MS : CLIP_GAP_MS);
       return;
     }
     applySnapshot(clip.frames[frameIdx]);
     draw();
+    playPos = { clip: clipIdx, t: clip.times ? clip.times[frameIdx] : frameIdx*FRAME_MS };
+    updateGarakBadge();
     const delay = frameDelay(clip, frameIdx);
     frameIdx++;
     playTimer = setTimeout(tick, delay);
   }
   playTimer = setTimeout(tick, 300);
+}
+
+// ─── 가락 표시 ───
+// 녹화 중이면 지금 이 순간, 재생 중이면 재생하고 있는 순간에 '여기부터 이 가락'을 남김 (동작의 events에 type 'garak')
+var playPos = null; // 재생 중인 위치 { clip, t } (var: 초기화 순서와 무관하게 쓰이도록)
+const clipDur = c => (c.times ? c.times[c.times.length - 1] : (c.frames.length - 1)*16);
+function clipStartOffset(ci) { let o = 0; for (let k = 0; k < ci; k++) o += clipDur(recordedClips[k]); return o; }
+const fmtMs = ms => { const sec = Math.round(ms/1000); return `${Math.floor(sec/60)}:${String(sec % 60).padStart(2, '0')}`; };
+// 모든 가락 표시를 녹화 전체 시간 순으로 (동작 사이 멈춤은 빼고 셈)
+function allGarakMarks() {
+  const out = [];
+  recordedClips.forEach((c, ci) => (c.events || []).forEach((e, ei) => { if (e.type === 'garak') out.push({ ci, ei, t: e.t, at: clipStartOffset(ci) + e.t, name: e.name }); }));
+  return out.sort((a, b) => a.at - b.at);
+}
+function garakAt(ci, t) {
+  const at = clipStartOffset(ci) + t;
+  let name = null;
+  for (const m of allGarakMarks()) if (m.at <= at + 1) name = m.name;
+  return name;
+}
+function updateGarakBadge() {
+  const el = document.getElementById('garakBadge');
+  let name = null;
+  if (playPos) name = garakAt(playPos.clip, playPos.t);
+  else if (isRecording) { const ms = allGarakMarks(); name = ms.length ? ms[ms.length - 1].name : null; if (pendingEvents.some(e => e.type === 'garak')) name = pendingEvents.filter(e => e.type === 'garak').pop().name; if (currentClip && currentClip.events) { const g = currentClip.events.filter(e => e.type === 'garak'); if (g.length) name = g[g.length - 1].name; } }
+  el.textContent = name ? `가락 · ${name}` : '';
+  el.classList.toggle('show', !!name);
+}
+function renderGarakMarks() {
+  const box = document.getElementById('garakMarks');
+  if (!box) return;
+  box.textContent = '';
+  for (const m of allGarakMarks()) {
+    const chip = document.createElement('span'); chip.className = 'mk';
+    chip.title = `동작 ${m.ci + 1}의 ${(m.t/1000).toFixed(1)}초`;
+    chip.append(`${fmtMs(m.at)} ${m.name}`);
+    const del = document.createElement('button'); del.type = 'button'; del.textContent = '✕'; del.setAttribute('aria-label', `${m.name} 표시 지우기`);
+    del.addEventListener('click', () => { recordedClips[m.ci].events.splice(m.ei, 1); renderGarakMarks(); updateGarakBadge(); });
+    chip.append(del); box.append(chip);
+  }
+  updateGarakBadge();
+}
+function markGarak() {
+  const name = document.getElementById('garakInput').value.trim();
+  if (!name) { showToast('가락 이름을 먼저 고르거나 적으세요'); document.getElementById('garakInput').focus(); return; }
+  if (isRecording) {
+    recordEvent('garak', { name });
+    showToast(`지금부터 ${name}`);
+  } else if (isPlaying && playPos) {
+    const c = recordedClips[playPos.clip];
+    c.events = c.events || [];
+    // 같은 순간에 이미 있으면 바꿈
+    const same = c.events.findIndex(e => e.type === 'garak' && Math.abs(e.t - playPos.t) < 30);
+    if (same >= 0) c.events[same].name = name; else c.events.push({ t: playPos.t, type: 'garak', name });
+    c.events.sort((a, b) => a.t - b.t);
+    showToast(`${fmtMs(clipStartOffset(playPos.clip) + playPos.t)}부터 ${name}`);
+  } else { showToast('녹화하거나 재생하는 중에 가락이 바뀌는 순간 누르세요'); return; }
+  renderGarakMarks();
+}
+document.getElementById('btnGarakMark').addEventListener('click', markGarak);
+// 가락 이름을 고르거나 Enter를 치면 입력칸에서 빠져나옴 (그다음 G로 바로 표시)
+document.getElementById('garakInput').addEventListener('change', e => e.target.blur());
+document.getElementById('garakInput').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } });
+{
+  const dl = document.getElementById('garakNames');
+  const names = new Set(['질굿']);
+  for (const g of gasrakList) names.add(g.name);
+  for (const n of names) { const o = document.createElement('option'); o.value = n; dl.append(o); }
 }
 
 // 스냅샷(노드 상태 배열)을 현재 노드에 적용
@@ -3226,6 +3351,7 @@ document.getElementById('btnPlayback').addEventListener('click', () => {
 
 function stopPlayback() {
   isPlaying = false;
+  playPos = null; updateGarakBadge();
   clearTimeout(playTimer);
   document.getElementById('btnPlayback').textContent = '▶ 재생';
   document.getElementById('btnPlayback').classList.remove('active');
@@ -3393,6 +3519,7 @@ function buildRecordFile() {
     clips: recordedClips.map((c, i) => ({
       name: `동작 ${i + 1}`,
       ...(c.joined ? { joined: true } : {}),
+      ...(c.events && c.events.length ? { events: c.events.map(e => ({ ...e })) } : {}),
       times: c.times || null,
       frames: c.frames.map(encodeSnap),
     })),
@@ -3491,6 +3618,12 @@ function applyRecordFile(data) {
     const times = (Array.isArray(c.times) && c.times.length === frames.length) ? c.times.slice() : undefined;
     const clip = times ? { frames, times } : { frames };
     if (c.joined === true) clip.joined = true;
+    // 사건: 알 수 있는 모양만 받음
+    if (Array.isArray(c.events)) {
+      const ev = c.events.filter(e => e && typeof e.type === 'string' && Number.isFinite(e.t))
+        .map(e => { const o = { t: e.t, type: e.type }; if (typeof e.name === 'string') o.name = e.name.slice(0, 40); if (typeof e.dir === 'string') o.dir = e.dir; if (Number.isFinite(e.n)) o.n = e.n; if (Number.isFinite(e.period)) o.period = e.period; return o; });
+      if (ev.length) clip.events = ev;
+    }
     return clip;
   });
 
@@ -3582,6 +3715,7 @@ document.addEventListener('keydown', (e) => {
 
   if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'r' || e.key === 'R' || e.key === 'ㄱ')) { e.preventDefault(); autoRot ? stopAutoRotate() : startAutoRotate(); return; }
   if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'f' || e.key === 'F' || e.key === 'ㄹ')) { e.preventDefault(); flipAutoRotate(); return; }
+  if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'g' || e.key === 'G' || e.key === 'ㅎ')) { e.preventDefault(); markGarak(); return; }
   if (e.ctrlKey && e.key === 'z') { e.preventDefault(); document.getElementById('btnUndo').click(); }
   if (e.ctrlKey && e.key === 's') { e.preventDefault(); document.getElementById('btnSave').click(); }
   if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
