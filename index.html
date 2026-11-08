@@ -732,7 +732,14 @@ function drawCrosshair() {
   ctx.setLineDash([]);
 }
 
+// 그리기는 화면이 새로 그려질 때 한 번만 (마우스 이동이 초당 수백 번 와도 그림은 초당 최대 60번 정도)
+let drawQueued = false;
 function draw() {
+  if (drawQueued) return;
+  drawQueued = true;
+  requestAnimationFrame(() => { drawQueued = false; drawNow(); });
+}
+function drawNow() {
   ctx.clearRect(0, 0, stageW, stageH);
   ctx.fillStyle = '#fafbfc';
   ctx.fillRect(0, 0, stageW, stageH);
@@ -3502,6 +3509,21 @@ function lastRecordedFrame() {
   return c && c.frames.length ? c.frames[c.frames.length - 1] : null;
 }
 
+// 저장할 때 바로 앞 프레임과 똑같은 프레임은 뺌 (재생은 앞 프레임이 다음 시각까지 보이므로 똑같이 보임).
+// 첫 프레임과 마지막 프레임은 동작의 시작·길이를 지키려고 남김
+function compactClip(c) {
+  const enc = c.frames.map(encodeSnap);
+  const times = c.times && c.times.length === enc.length ? c.times : null;
+  const keepF = [], keepT = [];
+  let prevKey = null;
+  enc.forEach((f, k) => {
+    const key = JSON.stringify(f);
+    if (k === 0 || k === enc.length - 1 || key !== prevKey) { keepF.push(f); if (times) keepT.push(times[k]); }
+    prevKey = key;
+  });
+  return { frames: keepF, times: times ? keepT : null };
+}
+
 function buildRecordFile() {
   return {
     format: RECORD_FORMAT,
@@ -3516,13 +3538,16 @@ function buildRecordFile() {
     brokenLinks: Array.from(brokenLinks),
     // 녹화한 동작이 있으면 녹화된 것만 기록: 현재 진형 = 마지막 동작의 끝 모습 (녹화를 멈춘 뒤 움직인 것은 무시)
     current: encodeSnap(lastRecordedFrame() || nodeSnapshot()),
-    clips: recordedClips.map((c, i) => ({
-      name: `동작 ${i + 1}`,
-      ...(c.joined ? { joined: true } : {}),
-      ...(c.events && c.events.length ? { events: c.events.map(e => ({ ...e })) } : {}),
-      times: c.times || null,
-      frames: c.frames.map(encodeSnap),
-    })),
+    clips: recordedClips.map((c, i) => {
+      const cc = compactClip(c);
+      return {
+        name: `동작 ${i + 1}`,
+        ...(c.joined ? { joined: true } : {}),
+        ...(c.events && c.events.length ? { events: c.events.map(e => ({ ...e })) } : {}),
+        times: cc.times,
+        frames: cc.frames,
+      };
+    }),
     keyframes: keyframes.map(kf => ({
       name: kf.name,
       timestamp: kf.timestamp,
