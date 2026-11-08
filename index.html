@@ -37,7 +37,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:#eef1f6;color:#2a2a35;over
 .ctx-menu.show{display:block}
 .ctx-menu button{display:block;width:100%;text-align:left;padding:7px 12px;background:none;border:none;border-radius:5px;font-size:12px;color:#2a2a35;cursor:pointer;font-family:inherit}
 .ctx-menu button:hover{background:#eef1f6}
-canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block}
+canvas{border:2px solid #e94560;border-radius:8px;cursor:crosshair;display:block;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .sidebar{width:260px;background:#ffffff;border-left:1px solid #d8dde6;display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .sidebar h2{font-size:13px;padding:10px 12px;border-bottom:1px solid #d8dde6;color:#e94560;font-weight:500}
 .keyframes-list{flex:1;overflow-y:auto;padding:6px}
@@ -1470,102 +1470,56 @@ canvas.addEventListener('mouseleave', () => {
   draw();
 });
 
-// Touch support
-function touchPos(e) {
-  const touch = e.touches[0] || e.changedTouches[0];
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: (touch.clientX - rect.left) * (canvas.width / rect.width),
-    y: (touch.clientY - rect.top) * (canvas.height / rect.height),
+// ─── 터치: 손가락 하나를 마우스 왼쪽 버튼처럼 ───
+// 터치를 같은 자리의 마우스 이벤트로 바꿔 마우스 처리를 그대로 씀 (끊은 조각 끌기, 원진 스냅·궤도 회전·탈출,
+// 자동 회전 중 빠지기·다시 붙기, 녹화, 영역 선택, 두 번 톡 = 더블클릭, 무대 크기 조절까지 마우스와 같음).
+// 길게 누르면(0.55초, 거의 안 움직임) 우클릭 메뉴. 두 번째 손가락은 무시.
+(() => {
+  let touchId = null, startX = 0, startY = 0, longTimer = null, longPressed = false;
+  const send = (type, t, button = 0) => {
+    canvas.dispatchEvent(new MouseEvent(type, {
+      clientX: t.clientX, clientY: t.clientY, button, buttons: type === 'mouseup' ? 0 : (button === 2 ? 2 : 1),
+      bubbles: true, cancelable: true, view: window,
+    }));
   };
-}
-
-canvas.addEventListener('touchstart', (e) => {
-  e.preventDefault();
-  const pos = touchPos(e);
-  const now = Date.now();
-  const hoveredIdx = findNodeAt(pos);
-
-  if (hoveredIdx >= 0 && hoveredIdx === lastClickNodeIdx && now - lastClickTime < 400) {
-    saveUndo();
-    nodes[hoveredIdx].detached = !nodes[hoveredIdx].detached;
-    dragMode = 'individual';
-    dragNodeIdx = hoveredIdx;
-    dragChainOrder = [];
-    lastClickTime = 0;
-    lastClickNodeIdx = -1;
-    draw();
-    return;
-  }
-  lastClickTime = now;
-  lastClickNodeIdx = hoveredIdx;
-
-  if (hoveredIdx < 0) { dragMode = null; return; }
-  const node = nodes[hoveredIdx];
-  if (node.detached) {
-    saveUndo();
-    dragMode = 'individual';
-    dragNodeIdx = hoveredIdx;
-    dragChainOrder = [];
-    return;
-  }
-  const chain = getChainIndices();
-  if (chain.length === 0) { dragMode = null; return; }
-  const headIdx = chain[0];
-  const tailIdx = chain[chain.length - 1];
-  if (hoveredIdx === headIdx) {
-    saveUndo();
-    dragMode = 'chain';
-    dragChainOrder = chain;
-    path = [];
-    for (let i = chain.length - 1; i >= 0; i--) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
-    initDragDist();
-  } else if (hoveredIdx === tailIdx) {
-    saveUndo();
-    dragMode = 'chain';
-    dragChainOrder = chain.slice().reverse();
-    path = [];
-    for (let i = 0; i < chain.length; i++) path.push({x: nodes[chain[i]].x, y: nodes[chain[i]].y});
-    initDragDist();
-  } else {
-    dragMode = null;
-  }
-}, {passive: false});
-
-canvas.addEventListener('touchmove', (e) => {
-  e.preventDefault();
-  const pos = touchPos(e);
-  if (dragMode === 'individual') {
-    nodes[dragNodeIdx].x = pos.x;
-    nodes[dragNodeIdx].y = pos.y;
-    draw();
-    return;
-  }
-  if (dragMode === 'chain') {
-    const last = path[path.length - 1];
-    const dx = pos.x - last.x;
-    const dy = pos.y - last.y;
-    // 자동 회전 중인 원진에서 끌고 나간 사람들만 회전에서 빠짐. 나머지는 계속 돎 (뒷사람이 빠져도 앞사람은 계속 걸음)
-    if (autoRot && (dx*dx + dy*dy > 9)) autoRotRelease(dragChainOrder);
-    if (dx*dx + dy*dy > 9) {
-      path.push({x: pos.x, y: pos.y});
-      updateNodesFromPath();
-      draw();
-    }
-  }
-}, {passive: false});
-
-canvas.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  if (dragMode === 'individual' && dragNodeIdx >= 0 && nodes[dragNodeIdx].detached) {
-    if (tryReattach(dragNodeIdx)) showToast('진형에 재연결되었습니다');
-  }
-  dragMode = null;
-  dragNodeIdx = -1;
-  dragChainOrder = [];
-  path = [];
-  draw();
-}, {passive: false});
+  const find = (list) => { for (const t of list) if (t.identifier === touchId) return t; return null; };
+  const clearLong = () => { if (longTimer) { clearTimeout(longTimer); longTimer = null; } };
+  canvas.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (touchId !== null) return; // 두 번째 손가락
+    const t = e.changedTouches[0];
+    touchId = t.identifier; startX = t.clientX; startY = t.clientY; longPressed = false;
+    send('mousedown', t);
+    clearLong();
+    longTimer = setTimeout(() => {
+      longTimer = null;
+      if (touchId === null) return;
+      // 길게 누름: 지금 동작은 그 자리에서 끝내고 우클릭 메뉴
+      longPressed = true;
+      const at = { clientX: startX, clientY: startY };
+      send('mouseup', at);
+      send('mousedown', at, 2);
+      send('mouseup', at, 2);
+    }, 550);
+  }, { passive: false });
+  canvas.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    const t = find(e.changedTouches);
+    if (!t || longPressed) return;
+    if (Math.hypot(t.clientX - startX, t.clientY - startY) > 8) clearLong();
+    send('mousemove', t);
+  }, { passive: false });
+  const end = (e) => {
+    e.preventDefault();
+    const t = find(e.changedTouches);
+    if (!t) return;
+    clearLong();
+    if (!longPressed) send('mouseup', t);
+    touchId = null; longPressed = false;
+  };
+  canvas.addEventListener('touchend', end, { passive: false });
+  canvas.addEventListener('touchcancel', end, { passive: false });
+})();
 
 // Undo
 function saveUndo() {
